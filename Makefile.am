@@ -4,6 +4,7 @@ ACLOCAL_AMFLAGS  = -I m4
 noinst_LTLIBRARIES=lib/libhashclash.la
 
 lib_libhashclash_la_SOURCES=\
+	lib/hashclash/bestof.hpp \
 	lib/hashclash/booleanfunction.cpp lib/hashclash/booleanfunction.hpp \
 	lib/hashclash/conditions.cpp lib/hashclash/conditions.hpp \
 	lib/hashclash/cpuperformance.hpp \
@@ -26,9 +27,18 @@ bin_PROGRAMS=\
 	bin/md5_diffpathforward \
 	bin/md5_diffpathbackward \
 	bin/md5_diffpathconnect \
-	bin/md5_diffpathhelper
+	bin/md5_diffpathhelper \
+	bin/md5_birthdaysearch \
+	bin/sha1_diffpathforward \
+	bin/sha1_diffpathbackward \
+	bin/sha1_diffpathconnect \
+	bin/sha1_diffpathhelper \
+	bin/sha1_attackgenerator
 
-AM_CPPFLAGS=-I$(top_srcdir)/lib
+EXTRA_PROGRAMS=\
+	bin/sha1_attack
+
+AM_CPPFLAGS=-I$(top_srcdir)/lib -DBOOST_NO_CXX11_SCOPED_ENUMS
 LDADD=lib/libhashclash.la
 
 bin_md5_diffpathforward_SOURCES=\
@@ -55,3 +65,51 @@ bin_md5_diffpathhelper_SOURCES=\
 	src/md5helper/main.cpp \
 	src/md5helper/main.hpp \
 	src/md5helper/startnearcollision.cpp
+
+bin_md5_birthdaysearch_SOURCES=\
+	src/md5birthdaysearch/birthday.cpp \
+	src/md5birthdaysearch/birthday_types.hpp \
+	src/md5birthdaysearch/config.h \
+	src/md5birthdaysearch/cuda_md5.cu \
+	src/md5birthdaysearch/distribution.hpp \
+	src/md5birthdaysearch/dostep.cpp \
+	src/md5birthdaysearch/main.cpp \
+	src/md5birthdaysearch/main.hpp \
+	src/md5birthdaysearch/storage.cpp \
+	src/md5birthdaysearch/storage.hpp
+
+bin_sha1_diffpathforward_SOURCES=\
+	src/sha1forward/dostep.cpp \
+	src/sha1forward/forward.cpp \
+	src/sha1forward/main.cpp \
+	src/sha1forward/main.hpp
+
+bin_sha1_diffpathbackward_SOURCES=\
+	src/sha1backward/backward.cpp \
+	src/sha1backward/dostep.cpp \
+	src/sha1backward/main.cpp \
+	src/sha1backward/main.hpp
+
+bin_sha1_diffpathconnect_SOURCES=\
+	src/sha1connect/connect.cpp \
+	src/sha1connect/dostep.cpp \
+	src/sha1connect/main.cpp \
+	src/sha1connect/main.hpp
+
+bin_sha1_diffpathhelper_SOURCES=\
+	src/sha1helper/convert.cpp \
+	src/sha1helper/filter.cpp \
+	src/sha1helper/main.cpp \
+	src/sha1helper/main.hpp
+
+bin_sha1_attackgenerator_SOURCES=\
+	src/sha1attackgenerator/checkokpaths.cpp \
+	src/sha1attackgenerator/collisionfinding.cpp \
+	src/sha1attackgenerator/main.cpp \
+	src/sha1attackgenerator/tunnel_analysis.cpp \
+	src/sha1attackgenerator/filters.cpp \
+	src/sha1attackgenerator/main.hpp \
+	src/sha1attackgenerator/program_generator.cpp
+
+bin_sha1_attack_SOURCES=\
+	src/sha1attackgenerator/collfind.cpp
