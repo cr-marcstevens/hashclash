@@ -4,12 +4,11 @@ BOOST_VERSION=1.57.0
 
 BOOST_BUILD_OPTIONS="-j4 --without-graph --without-graph_parallel --without-python --without-regex --without-wave "
 BOOST_BUILD_CXXFLAGS="-std=c++11"
+BOOST_INSTALL_PREFIX=$(pwd)/local
 
 BOOST_DIRVERSION=`echo $BOOST_VERSION | tr . _`
 BOOST_DIR=boost_$BOOST_DIRVERSION
 BOOST_FILE=$BOOST_DIR.tar.gz
-
-PWD=`pwd`
 
 function test_tar_gz_file
 {
@@ -69,13 +68,13 @@ cd $BOOST_DIR
 ./bootstrap.sh \
 	cxxflags="$BOOST_BUILD_CXXFLAGS" \
 	linkflags="$BOOST_BUILD_CXXFLAGS" \
-	--prefix=$PWD/boost
+	--prefix=$BOOST_INSTALL_PREFIX
 
 # compile boost
 ./b2 \
 	cxxflags="$BOOST_BUILD_CXXFLAGS" \
 	linkflags="$BOOST_BUILD_CXXFLAGS" \
-	--prefix=$PWD/boost \
+	--prefix=$BOOST_INSTALL_PREFIX \
 	$BOOST_BUILD_OPTIONS \
 	--build-type=minimal \
 	install
