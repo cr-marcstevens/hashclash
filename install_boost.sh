@@ -1,10 +1,9 @@
 #!/bin/bash
 
-BOOST_VERSION=1.57.0
-
-BOOST_BUILD_OPTIONS=" -j4 --without-graph --without-graph_parallel --without-python --without-regex --without-wave "
-BOOST_BUILD_CXXFLAGS="-march=native -O2 -std=c++11"
-BOOST_INSTALL_PREFIX=$(pwd)/local
+: ${BOOST_VERSION:=1.57.0}
+: ${BOOST_BUILD_OPTIONS:=" -j4 --without-graph --without-graph_parallel --without-python --without-regex --without-wave "}
+: ${BOOST_BUILD_CXXFLAGS:="-march=native -O2 -std=c++11"}
+: ${BOOST_INSTALL_PREFIX:=$(pwd)/local}
 
 BOOST_DIRVERSION=`echo $BOOST_VERSION | tr . _`
 BOOST_DIR=boost_$BOOST_DIRVERSION
@@ -40,6 +39,7 @@ function retrieve_tar_gz_file
 
 # retrieve file if necessary
 retrieve_tar_gz_file $BOOST_FILE https://downloads.sourceforge.net/project/boost/boost/$BOOST_VERSION/$BOOST_FILE
+retrieve_tar_gz_file $BOOST_FILE https://downloads.sourceforge.net/project/boost/boost/$BOOST_VERSION/$BOOST_FILE
 
 # test if we have file
 test_tar_gz_file $BOOST_FILE \
@@ -71,13 +71,20 @@ cd $BOOST_DIR
 	--prefix=$BOOST_INSTALL_PREFIX
 
 # compile boost
-./b2 \
+./bjam -q \
 	cxxflags="$BOOST_BUILD_CXXFLAGS" \
 	linkflags="$BOOST_BUILD_CXXFLAGS" \
 	--prefix=$BOOST_INSTALL_PREFIX \
 	$BOOST_BUILD_OPTIONS \
 	--build-type=minimal \
-	install
+	install \
+	|| ( echo "Building boost failed!" ; exit 1 )
 
 # exit boost directory
 cd ..
+
+
+# cleanup boost directory
+echo -n "Removing old directory $BOOST_DIR..."
+rm -rf $BOOST_DIR
+echo "done."
