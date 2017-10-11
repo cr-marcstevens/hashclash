@@ -2,8 +2,8 @@
 
 BOOST_VERSION=1.57.0
 
-BOOST_BUILD_OPTIONS="-j4 --without-graph --without-graph_parallel --without-python --without-regex --without-wave "
-BOOST_BUILD_CXXFLAGS="-std=c++11"
+BOOST_BUILD_OPTIONS=" -j4 --without-graph --without-graph_parallel --without-python --without-regex --without-wave "
+BOOST_BUILD_CXXFLAGS="-march=native -O2 -std=c++11"
 BOOST_INSTALL_PREFIX=$(pwd)/local
 
 BOOST_DIRVERSION=`echo $BOOST_VERSION | tr . _`
