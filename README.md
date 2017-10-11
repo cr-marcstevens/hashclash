@@ -13,7 +13,7 @@ Project HashClash - MD5 & SHA-1 cryptanalytic toolbox
 
   `sudo apt-get install zlib1g-dev libbz2-dev`
   
-- local boost C++ libraries (preferable version 1.57)
+- local boost C++ libraries **compiled with -std=c++11** (preferable version 1.57)
 
   `./install_boost.sh`
 
