@@ -20,8 +20,7 @@ lib_libhashclash_la_SOURCES=\
 	lib/hashclash/timer.cpp lib/hashclash/timer.hpp \
 	lib/hashclash/types.hpp
 
-lib_libhashclash_la_LIBADD=-lboost_thread -lboost_serialization -lboost_program_options -lboost_filesystem -lboost_iostreams -lboost_system -lz -lbz2
-lib_libhashclash_la_LDFLAGS=-no-undefined -version-info @HASHCLASH_LT_CURRENT@:@HASHCLASH_LT_REVISION@:@HASHCLASH_LT_AGE@
+lib_libhashclash_la_LDFLAGS=-no-undefined 
 
 bin_PROGRAMS=\
 	bin/md5_diffpathforward \
@@ -38,7 +37,7 @@ bin_PROGRAMS=\
 EXTRA_PROGRAMS=\
 	bin/sha1_attack
 
-AM_CPPFLAGS=-I$(top_srcdir)/lib -DBOOST_NO_CXX11_SCOPED_ENUMS
+AM_CPPFLAGS=-I$(top_srcdir)/lib 
 LDADD=lib/libhashclash.la
 
 bin_md5_diffpathforward_SOURCES=\

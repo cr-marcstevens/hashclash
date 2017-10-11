@@ -14,26 +14,6 @@ CXXFLAGS=${CXXFLAGS:-$DEFAULT_CXXFLAGS}
 
 LT_INIT
 
-
-# The version of the libtool library is of the form current:revision:age
-#
-# See http://www.gnu.org/software/libtool/manual/html_node/Updating-version-info.html
-#
-# When doing a release, they should be updated like this:
-# 1. If no interfaces changed, only implementations: just increment
-#    revision.
-# 2. If interfaces were added, none removed: increment current, set
-#    revision to zero and increment age.
-# 3. If interfaces were removed (breaks backward compatibility): increment
-#    current, and set both revision and age to zero.
-HASHCLASH_LT_CURRENT=1
-HASHCLASH_LT_REVISION=0
-HASHCLASH_LT_AGE=0
-
-AC_SUBST(HASHCLASH_LT_CURRENT)
-AC_SUBST(HASHCLASH_LT_REVISION)
-AC_SUBST(HASHCLASH_LT_AGE)
-
 AC_PROG_INSTALL
 AC_PROG_MAKE_SET
 AC_PROG_LN_S
@@ -55,12 +35,19 @@ AX_PTHREAD()
 LIBS="$PTHREAD_LIBS $LIBS"
 CXXFLAGS="$CXXFLAGS $PTHREAD_CFLAGS"
 
-AC_CHECK_LIB(z,deflate)
-AC_CHECK_LIB(bz2,BZ2_bzCompress)
+AC_CHECK_LIB(z,deflate,,AC_MSG_ERROR([zlib library required]))
+AC_CHECK_LIB(bz2,BZ2_bzCompress,,AC_MSG_ERROR([bzip2 library required]))
 
-AX_BOOST_BASE([1.54],,[AC_MSG_ERROR([HashClash needs Boost])])
+AX_BOOST_BASE([1.57],,AC_MSG_ERROR([boost c++ library required]))
+AX_BOOST_FILESYSTEM
+AX_BOOST_IOSTREAMS
+AX_BOOST_PROGRAM_OPTIONS
+AX_BOOST_SERIALIZATION
+AX_BOOST_SYSTEM
+AX_BOOST_THREAD
 CPPFLAGS="$BOOST_CPPFLAGS $CPPFLAGS"
 LDFLAGS="$BOOST_LDFLAGS $LDFLAGS"
+LIBS="$BOOST_FILESYSTEM_LIB $BOOST_IOSTREAMS_LIB $BOOST_PROGRAM_OPTIONS_LIB $BOOST_SERIALIZATION_LIB $BOOST_SYSTEM_LIB $BOOST_THREAD_LIB $LIBS"
 
 AC_CONFIG_FILES([
  Makefile
