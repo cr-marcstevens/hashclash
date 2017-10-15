@@ -76,7 +76,7 @@ cd $BOOST_DIR
 	linkflags="$BOOST_BUILD_CXXFLAGS" \
 	--prefix=$BOOST_INSTALL_PREFIX \
 	$BOOST_BUILD_OPTIONS \
-	--build-type=minimal \
+	--build-type=minimal link=static \
 	install \
 	|| ( echo "Building boost failed!" ; exit 1 )
 

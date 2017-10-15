@@ -8,7 +8,7 @@ AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([foreign subdir-objects])
 
 
-DEFAULT_CXXFLAGS="-march=native -O3 -Wall"
+DEFAULT_CXXFLAGS="-march=native -O3"
 
 CXXFLAGS=${CXXFLAGS:-$DEFAULT_CXXFLAGS}
 

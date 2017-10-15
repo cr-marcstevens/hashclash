@@ -19,6 +19,7 @@
 
 #include "sha1messagespace.hpp"
 #include "progress_display.hpp"
+#include <cmath>
 
 using namespace std;
 
