@@ -40,6 +40,7 @@ Project HashClash - MD5 & SHA-1 cryptanalytic toolbox
 - Create temporary working directory (in top directory)
 
   `mkdir cpc_workdir`
+  
   `cd cpc_workdir`
   
 - Run script
