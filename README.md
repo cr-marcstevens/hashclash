@@ -27,9 +27,9 @@ Project HashClash - MD5 & SHA-1 cryptanalytic toolbox
 
   `autoreconf --install`
   
-- Run configure (with boost installed in $(pwd)/local by install_boost.sh)
+- Run configure (with boost installed in `$(pwd)/local` by `install_boost.sh`)
 
-  `./configure --with-boost=$PWD/local`
+  `./configure --with-boost=$(pwd)/local`
   
 - Build programs
 
