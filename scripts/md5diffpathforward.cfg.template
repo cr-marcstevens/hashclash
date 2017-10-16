@@ -2,7 +2,7 @@ autobalance = 2000000
 estimate = 4
 fillfraction = 1
 
-maxweight = 12
-maxsdrs = 16
+maxweight = 15
+maxsdrs = 1
 minQ456tunnel = 18
 minQ91011tunnel = 18

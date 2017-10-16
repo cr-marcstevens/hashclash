@@ -929,7 +929,7 @@ void collisionfinding_thread::do_step16()
 				
 				Q1Q2m0withm1ok.push_back( make_triple(Q1,Q2,m0) );
 			} while (Q1cur != 0 && Q1Q2m0withm1ok.size() < (1<<20));
-			cout << "Q1Q2m0withm1ok: " << Q1Q2m0withm1ok.size() << endl;
+//			cout << "Q1Q2m0withm1ok: " << Q1Q2m0withm1ok.size() << endl;
 
 			if (isinfinite) { cout << "." << flush; isinfinite = false; }
 			do_step17();
