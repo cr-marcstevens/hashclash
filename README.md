@@ -42,13 +42,9 @@ Project HashClash - MD5 & SHA-1 cryptanalytic toolbox
   `mkdir cpc_workdir`
   `cd cpc_workdir`
   
-- Copy necessary files
-
-  `cp ../scripts/cpc.sh ../scripts/*.template .`
-  
 - Run script
 
-  `./cpc.sh <prefix.filename1> <prefix.filename2>`
+  `../scripts/cpc.sh <prefix.filename1> <prefix.filename2>`
 
 - Monitor progress of script
 
@@ -58,4 +54,4 @@ Project HashClash - MD5 & SHA-1 cryptanalytic toolbox
   * kill script & any running md5_diffpathhelper programs
   * let K be the number of the last `workdir$(K)` directory
   * restart script:
-    `./cpc.sh <prefix.filename1> <prefix.filename2> $((K-1))`
+    `../scripts/cpc.sh <prefix.filename1> <prefix.filename2> $((K-1))`
