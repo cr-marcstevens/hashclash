@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export BINDIR=../bin
+export BINDIR=$(dirname $0)/../bin
 export BIRTHDAYSEARCH=$BINDIR/md5_birthdaysearch
 export HELPER=$BINDIR/md5_diffpathhelper
 export FORWARD=$BINDIR/md5_diffpathforward
@@ -92,6 +92,27 @@ let k=$3
 if [ "$k" = "" ]; then
 	let k=0
 fi
+
+cat <<EOF >md5diffpathbackward.cfg.template
+autobalance = 1000000
+estimate = 4
+fillfraction = 1
+maxsdrs = 1
+condtend = 35
+EOF
+
+cat <<EOF >md5diffpathforward.cfg.template
+autobalance = 2000000
+estimate = 4
+fillfraction = 1
+maxsdrs = 1
+minQ456tunnel = 18
+minQ91011tunnel = 18
+EOF
+
+cat <<EOF >md5diffpathconnect.cfg.template
+Qcondstart = 21
+EOF
 
 while true; do
 	if [ -f ${file1}.coll -a -f ${file2}.coll ]; then
