@@ -53,7 +53,6 @@ int main(int argc, char** argv)
 
 		// Define program options
 		po::options_description 
-			hidden1, hidden2, 
 			desc("Allowed options"), 			
 			all("Allowed options");
 
@@ -119,25 +118,7 @@ int main(int argc, char** argv)
 				, "Number of computing threads to start.")
 			;
 
-		hidden2.add_options()
-			("cuda_dev_query", "Query CUDA devices")
-			("cuda_enable", po::bool_switch(&parameters.cuda_enabled), "Enable CUDA")
-			;
-
-#ifdef CELL
-		desc.add_options()
-			("sputhreads"
-				, po::value<unsigned>(&parameters.sputhreads)->default_value(6)
-				, "Number of computing Cell SPU threads to start.")
-			;
-#else
-		all.add_options()
-			("sputhreads"
-				, po::value<unsigned>(&parameters.sputhreads)->default_value(6)
-				, "Number of computing Cell SPU threads to start.")
-			;
-#endif // CELL
-#ifdef CUDA
+#ifdef HAVE_CUDA
 		desc.add_options()
 			("cuda_dev_query", "Query CUDA devices")
 			("cuda_enable", po::bool_switch(&parameters.cuda_enabled), "Enable CUDA")
@@ -204,15 +185,12 @@ int main(int argc, char** argv)
 				return 2;
 			}			
 		}
-#ifdef CUDA
+#ifdef HAVE_CUDA
 		if (vm.count("cuda_dev_query")) {
 			cuda_device_query();
 			return 0;
 		}
 #endif // CUDA
-#ifndef CELL
-		parameters.sputhreads = 0;
-#endif
 		result = dostep(parameters);
 	} catch (exception& e) {
 		cout << "Runtime: " << runtime.time() << endl;

@@ -63,6 +63,10 @@ void save_block(ostream& o, uint32 block[]);
 
 // cuda
 
+#ifdef HASHCLASH_HAVE_CUDA
+#define HAVE_CUDA
+#endif
+
 void cuda_device_query();
 int get_num_cuda_devices();
 

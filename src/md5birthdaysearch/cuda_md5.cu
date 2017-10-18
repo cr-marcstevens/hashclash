@@ -23,8 +23,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
-#include <cutil_inline.h>
-#include <cutil.h>
 #include <cuda.h>
 #include <boost/cstdint.hpp>
 
@@ -35,6 +33,14 @@ typedef boost::uint64_t uint64;
 
 #define TRAIL_NOCONSTRUCTOR
 #include "birthday_types.hpp"
+
+#ifndef CUDA_SAFE_CALL
+#define CUDA_SAFE_CALL(s) (s)
+#endif
+
+#ifndef cutilSafeCall
+#define cutilSafeCall(s) (s)
+#endif
 
 class cuda_device_detail {
 public:

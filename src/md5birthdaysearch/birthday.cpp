@@ -552,7 +552,7 @@ struct birthday_thread {
 
 				if (quit) return;
 			}
-#ifdef CUDA
+#ifdef HAVE_CUDA
 			if (_cuda_device_nr >= 0)
 				_cuda_device.cuda_fill_trail_buffer(id, seed, work, collisions, bool(maxblocks == 1));
 			else
@@ -574,7 +574,7 @@ struct birthday_thread {
 
 	void loop(bool single = false)
 	{
-#ifdef CUDA
+#ifdef HAVE_CUDA
 		if (_cuda_device_nr >= 0) {
 			loop_cuda(single);
 			return;
@@ -630,7 +630,7 @@ struct birthday_thread {
 		{
 			{	
 				LOCK_GLOBAL_MUTEX;
-#ifdef CUDA
+#ifdef HAVE_CUDA
 				if (_cuda_device_nr >= 0) {
 					cout << "Thread " << id << " created (CUDA)." << endl;
 					if (!_cuda_device.init(_cuda_device_nr, ihv1, ihv2, ihv2mod, msg1, msg2, hybridmask, distinguishedpointmask, maximumpathlength))
@@ -770,7 +770,7 @@ void birthday(birthday_parameters& parameters)
 		parameters.threads = boost::thread::hardware_concurrency();
 
 	int cuda_dev_cnt = 0;
-#ifdef CUDA
+#ifdef HAVE_CUDA
 	if (parameters.cuda_enabled) 
 		cuda_dev_cnt = get_num_cuda_devices();
 	// if possible save 1 cpucore for better cuda latency
@@ -779,16 +779,16 @@ void birthday(birthday_parameters& parameters)
 #endif
 
 	boost::thread_group threads;
-	vector<birthday_thread*> threads_data(parameters.threads + parameters.sputhreads, 0);
+	vector<birthday_thread*> threads_data(parameters.threads, 0);
 	for (unsigned i = 0; i < threads_data.size(); ++i)
 	{
-		threads_data[i] = new birthday_thread( bool(i >= parameters.threads) );
+		threads_data[i] = new birthday_thread();
 		threads.create_thread( birthday_thread_shell(threads_data[i]) );
 	}
-#ifdef CUDA
+#ifdef HAVE_CUDA
 	if (parameters.cuda_enabled) {
 		for (int i = 0; i < cuda_dev_cnt; ++i) {
-			threads_data.push_back(new birthday_thread(false, i));
+			threads_data.push_back(new birthday_thread(i));
 			threads.create_thread( birthday_thread_shell(threads_data[threads_data.size()-1]) );
 		}
 	}

@@ -2,7 +2,7 @@ AC_PREREQ([2.68])
 AC_INIT([HashClash], [1.0.0], [marc@marc-stevens.nl],[hashclash],[https://github.com/cr-marcstevens/hashclash])
 AC_CONFIG_SRCDIR([README.md])
 AC_CONFIG_HEADERS([config.h])
-AX_PREFIX_CONFIG_H([lib/config.h])
+AX_PREFIX_CONFIG_H([lib/hashclash/config.h])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([foreign subdir-objects])
@@ -48,6 +48,8 @@ AX_BOOST_THREAD
 CPPFLAGS="$BOOST_CPPFLAGS $CPPFLAGS"
 LDFLAGS="$BOOST_LDFLAGS $LDFLAGS"
 LIBS="$BOOST_FILESYSTEM_LIB $BOOST_IOSTREAMS_LIB $BOOST_PROGRAM_OPTIONS_LIB $BOOST_SERIALIZATION_LIB $BOOST_SYSTEM_LIB $BOOST_THREAD_LIB $LIBS"
+
+AX_CUDA
 
 AC_CONFIG_FILES([
  Makefile
