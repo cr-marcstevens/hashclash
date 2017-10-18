@@ -81,6 +81,8 @@ if HAVE_CUDA
 bin_md5_birthdaysearch_SOURCES+=\
 	src/md5birthdaysearch/cuda_md5.cu
 bin_md5_birthdaysearch_LDADD=lib/libhashclash.la $(CUDA_LIBS)
+else
+bin_md5_birthdaysearch_LDADD=lib/libhashclash.la
 endif
 
 bin_sha1_diffpathforward_SOURCES=\

@@ -112,15 +112,7 @@ then
 	    CUDA_LIBS="-L/usr/local/cuda/$libdir -lcudart"
 	fi
 
-	# Env var CUDA_DRIVER_LIB_PATH can be used to set an alternate driver library path
-	# this is usefull when building on a host where only toolkit (nvcc) is installed
-	# and not driver. Driver libs must be placed in some location specified by this var.
-	if test -n "$CUDA_DRIVER_LIB_PATH"
-	then
-	    CUDA_LIBS+=" -L$CUDA_DRIVER_LIB_PATH -lcuda"
-	else
-	    CUDA_LIBS+=" -lcuda"
-	fi
+	CUDA_LIBS+=" -L$cuda_home_path/$libdir/stubs -lcuda"
 
 	saved_CPPFLAGS=$CPPFLAGS
 	saved_LIBS=$LIBS
