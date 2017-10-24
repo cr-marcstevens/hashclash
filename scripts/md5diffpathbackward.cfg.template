@@ -1,7 +1,0 @@
-autobalance = 1000000
-estimate = 4
-fillfraction = 1
-
-maxweight = 11
-maxsdrs = 1
-condtend = 35
