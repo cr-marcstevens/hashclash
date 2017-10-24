@@ -1,3 +1,5 @@
+SUFFIXES=.cu
+
 EXTRA_DIST       = README.md LICENSE.TXT
 ACLOCAL_AMFLAGS  = -I m4
 
@@ -20,7 +22,7 @@ lib_libhashclash_la_SOURCES=\
 	lib/hashclash/timer.cpp lib/hashclash/timer.hpp \
 	lib/hashclash/types.hpp
 
-lib_libhashclash_la_LDFLAGS=-no-undefined 
+lib_libhashclash_la_LDFLAGS=-no-undefined
 
 bin_PROGRAMS=\
 	bin/md5_diffpathforward \
@@ -37,7 +39,7 @@ bin_PROGRAMS=\
 EXTRA_PROGRAMS=\
 	bin/sha1_attack
 
-AM_CPPFLAGS=-I$(top_srcdir)/lib 
+AM_CPPFLAGS=-I$(top_srcdir)/lib
 LDADD=lib/libhashclash.la
 
 bin_md5_diffpathforward_SOURCES=\
@@ -69,13 +71,19 @@ bin_md5_birthdaysearch_SOURCES=\
 	src/md5birthdaysearch/birthday.cpp \
 	src/md5birthdaysearch/birthday_types.hpp \
 	src/md5birthdaysearch/config.h \
-	src/md5birthdaysearch/cuda_md5.cu \
 	src/md5birthdaysearch/distribution.hpp \
 	src/md5birthdaysearch/dostep.cpp \
 	src/md5birthdaysearch/main.cpp \
 	src/md5birthdaysearch/main.hpp \
 	src/md5birthdaysearch/storage.cpp \
 	src/md5birthdaysearch/storage.hpp
+if HAVE_CUDA
+bin_md5_birthdaysearch_SOURCES+=\
+	src/md5birthdaysearch/cuda_md5.cu
+bin_md5_birthdaysearch_LDADD=lib/libhashclash.la $(CUDA_LIBS)
+else
+bin_md5_birthdaysearch_LDADD=lib/libhashclash.la
+endif
 
 bin_sha1_diffpathforward_SOURCES=\
 	src/sha1forward/dostep.cpp \
@@ -112,3 +120,8 @@ bin_sha1_attackgenerator_SOURCES=\
 
 bin_sha1_attack_SOURCES=\
 	src/sha1attackgenerator/collfind.cpp
+
+NVCCFLAGS=-ccbin $(CXX) -O2 -v --maxrregcount=32 --ptxas-options=-v
+
+.cu.o:
+	$(NVCC) $(NVCCFLAGS) $(CUDA_CFLAGS) $(addprefix -Xcompiler ,$(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS)) -o $@ -c $<

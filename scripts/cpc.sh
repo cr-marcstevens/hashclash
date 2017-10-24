@@ -29,7 +29,7 @@ else
 fi
 
 if [ "$3" = "" ] ; then
-	$BIRTHDAYSEARCH --inputfile1 "$file1" --inputfile2 "$file2" --hybridbits 0 --pathtyperange 2 --maxblocks 9 --maxmemory 100 --threads $CPUS
+	$BIRTHDAYSEARCH --inputfile1 "$file1" --inputfile2 "$file2" --hybridbits 0 --pathtyperange 2 --maxblocks 9 --maxmemory 100 --threads $CPUS --cuda_enable
 else
 	if [ "$4" != "" ]; then
 		cp $file1 file1.bin
