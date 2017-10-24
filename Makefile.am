@@ -22,7 +22,7 @@ lib_libhashclash_la_SOURCES=\
 	lib/hashclash/timer.cpp lib/hashclash/timer.hpp \
 	lib/hashclash/types.hpp
 
-lib_libhashclash_la_LDFLAGS=-no-undefined 
+lib_libhashclash_la_LDFLAGS=-no-undefined
 
 bin_PROGRAMS=\
 	bin/md5_diffpathforward \
@@ -39,7 +39,7 @@ bin_PROGRAMS=\
 EXTRA_PROGRAMS=\
 	bin/sha1_attack
 
-AM_CPPFLAGS=-I$(top_srcdir)/lib 
+AM_CPPFLAGS=-I$(top_srcdir)/lib
 LDADD=lib/libhashclash.la
 
 bin_md5_diffpathforward_SOURCES=\
@@ -121,5 +121,7 @@ bin_sha1_attackgenerator_SOURCES=\
 bin_sha1_attack_SOURCES=\
 	src/sha1attackgenerator/collfind.cpp
 
+NVCCFLAGS=-ccbin $(CXX) -O2 -v --maxrregcount=32 --ptxas-options=-v
+
 .cu.o:
-	$(NVCC) $(NVCCFLAGS) -O2 -v --maxrregcount=32 --ptxas-options=-v -o $@ -c $< 
+	$(NVCC) $(NVCCFLAGS) $(CUDA_CFLAGS) $(addprefix -Xcompiler ,$(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS)) -o $@ -c $<

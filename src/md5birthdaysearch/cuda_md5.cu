@@ -31,6 +31,9 @@ using namespace std;
 typedef boost::uint32_t uint32;
 typedef boost::uint64_t uint64;
 
+#define MAX_CUDA_THREADS (1<<20)
+#define REGISTERS_PER_CUDA_THREAD 32
+
 #define TRAIL_NOCONSTRUCTOR
 #include "birthday_types.hpp"
 
@@ -46,12 +49,13 @@ class cuda_device_detail {
 public:
 	uint32 device;
 	uint32 blocks;
+	uint32 threadsperblock;
 	trail_type* buffer_host;
 };
 
 /* We assume that these are _thread specific_ (instead of global) storage managed by the cuda realtime libraries */
-__device__ trail_type working_states2[122880]; 
-__device__ trail_type buffer2[122880];
+__device__ trail_type working_states2[MAX_CUDA_THREADS];
+__device__ trail_type buffer2[MAX_CUDA_THREADS];
 
 __constant__ uint32 msg1[16], msg2[16], ihv1[4], ihv2[4], ihv2mod[4];
 __constant__ uint32 precomp1[4], precomp2[4];
@@ -62,7 +66,7 @@ __constant__ uint32 hybridmask, distinguishedpointmask, maximumpathlength;
 #define MD5_F(x, y, z) (((x) & (y)) | ((~x) & (z)))
 #define MD5_G(x, y, z) (((x) & (z)) | ((y) & (~z)))
 #define MD5_H(x, y, z) ((x) ^ (y) ^ (z))
-#define MD5_I(x, y, z) ((y) ^ ((x) | (~z))) 
+#define MD5_I(x, y, z) ((y) ^ ((x) | (~z)))
 
 /* ROTATE_LEFT rotates x left n bits */
 #define ROTATE_LEFT(x, n) (((x) << (n)) | ((x) >> (32-(n))))
@@ -102,7 +106,7 @@ bool cuda_device::init(uint32 device, const uint32 ihv1b[4], const uint32 ihv2b[
 {
 	detail = new cuda_device_detail;
 	detail->device = device;
-	
+
     int deviceCount;
     CUDA_SAFE_CALL( cudaGetDeviceCount(&deviceCount) );
     if (deviceCount == 0) {
@@ -115,14 +119,27 @@ bool cuda_device::init(uint32 device, const uint32 ihv1b[4], const uint32 ihv2b[
 		cout << "Emulation device found." << endl;
 		return false;
 	}
-	cout << "CUDA device " << device << ": " << deviceProp.name << " (" << 8 * deviceProp.multiProcessorCount << " cores)" << endl;
-	detail->blocks = 16 * deviceProp.multiProcessorCount;
-	
+	cout << "CUDA device " << device << ": " << deviceProp.name << " (" << deviceProp.multiProcessorCount << " MPs)" << endl;
+	unsigned maxthreadspermp = deviceProp.maxThreadsPerMultiProcessor;
+	if (maxthreadspermp > MAX_CUDA_THREADS)
+		maxthreadspermp = (MAX_CUDA_THREADS/32)*32;
+	while (maxthreadspermp > deviceProp.regsPerMultiprocessor * REGISTERS_PER_CUDA_THREAD)
+		maxthreadspermp -= 32;
+	unsigned minblockspermp = 1;
+	while (maxthreadspermp > minblockspermp * deviceProp.maxThreadsPerBlock)
+		minblockspermp += 1;
+	while (maxthreadspermp * REGISTERS_PER_CUDA_THREAD > minblockspermp * deviceProp.regsPerBlock)
+		minblockspermp += 1;
+
+	detail->threadsperblock = ((maxthreadspermp / minblockspermp) / 32) * 32;
+	detail->blocks = minblockspermp * deviceProp.multiProcessorCount;
+	cout << "Using " << detail->blocks << " blocks with " << detail->threadsperblock << " threads each: total " << detail->blocks * detail->threadsperblock << " threads." << endl;
+
 	CUDA_SAFE_CALL( cudaSetDevice(device) );
 	CUDA_SAFE_CALL( cudaSetDeviceFlags( cudaDeviceBlockingSync ) );
 
 	CUDA_SAFE_CALL( cudaMallocHost( (void**)(&(detail->buffer_host)), 122880 * sizeof(trail_type) ) );
-	
+
 	uint32 pc1[4], pc2[4];
 	uint32 a = ihv1b[0], b = ihv1b[1], c = ihv1b[2], d = ihv1b[3];
 	MD5_FF ( a, b, c, d, msg1b[ 0],  7, 3614090360); /* 1 */
@@ -165,9 +182,9 @@ bool cuda_device::init(uint32 device, const uint32 ihv1b[4], const uint32 ihv2b[
 	CUDA_SAFE_CALL( cudaMemcpyToSymbol(hybridmask, &hmask, sizeof(hmask)) );
 	CUDA_SAFE_CALL( cudaMemcpyToSymbol(distinguishedpointmask, &dpmask, sizeof(dpmask)) );
 	CUDA_SAFE_CALL( cudaMemcpyToSymbol(maximumpathlength, &maxlen, sizeof(maxlen)) );
-	
-	cuda_md5_init<<<detail->blocks, 256>>>();
-	
+
+	cuda_md5_init<<<detail->blocks, detail->threadsperblock>>>();
+
 	return true;
 }
 
@@ -175,7 +192,7 @@ __global__ void cuda_md5_work(uint64 seed)
 {
 	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
 	buffer2[idx].len = 0;
-	uint32 len = working_states2[idx].len;	
+	uint32 len = working_states2[idx].len;
 	uint32 x = working_states2[idx].end[0];
 	uint32 y = working_states2[idx].end[1];
 	uint32 z = working_states2[idx].end[2];
@@ -187,8 +204,8 @@ __global__ void cuda_md5_work(uint64 seed)
 		working_states2[idx].start[1] = y;
 		working_states2[idx].start[2] = z;
 		len = 0;
-	}	
-	__syncthreads();	
+	}
+//	__syncthreads();
 
 	for (unsigned j = 0; j < 0x100; ++j)
 	{
@@ -270,7 +287,7 @@ __global__ void cuda_md5_work(uint64 seed)
 			z = (d - b) & hybridmask;
 			++len;
 		}
-		
+
 		{
 			if (0 == (x & distinguishedpointmask)) {
 				buffer2[idx].end[0] = x;
@@ -289,7 +306,7 @@ __global__ void cuda_md5_work(uint64 seed)
 				working_states2[idx].start[2] = z;
 			}
 		}
-		__syncthreads();
+//		__syncthreads();
 	}
 
 	working_states2[idx].end[0] = x;
@@ -303,7 +320,7 @@ __global__ void cuda_md5_workmod(uint64 seed)
 {
 	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
 	buffer2[idx].len = 0;
-	uint32 len = working_states2[idx].len;	
+	uint32 len = working_states2[idx].len;
 	uint32 x = working_states2[idx].end[0];
 	uint32 y = working_states2[idx].end[1];
 	uint32 z = working_states2[idx].end[2];
@@ -315,8 +332,8 @@ __global__ void cuda_md5_workmod(uint64 seed)
 		working_states2[idx].start[1] = y;
 		working_states2[idx].start[2] = z;
 		len = 0;
-	}	
-	__syncthreads();	
+	}
+//	__syncthreads();
 
 	for (unsigned j = 0; j < 0x100; ++j)
 	{
@@ -379,7 +396,7 @@ __global__ void cuda_md5_workmod(uint64 seed)
 			MD5_II ( b, c, d, a, z, 21, 1309151649); /* 60 */
 			MD5_II ( a, b, c, d, in[ 4],  6, 4149444226); /* 61 */
 			MD5_II ( d, a, b, c, in[11], 10, 3174756917); /* 62 */
-			MD5_II ( c, d, a, b, in[ 2], 15,  718787259); /* 63 */			
+			MD5_II ( c, d, a, b, in[ 2], 15,  718787259); /* 63 */
 
 			if (x <= y) {
 				x = a + ihv1[0];
@@ -392,7 +409,7 @@ __global__ void cuda_md5_workmod(uint64 seed)
 			}
 			++len;
 		}
-		
+
 		{
 			if (0 == (x & distinguishedpointmask)) {
 				buffer2[idx].end[0] = x;
@@ -411,7 +428,7 @@ __global__ void cuda_md5_workmod(uint64 seed)
 				working_states2[idx].start[2] = z;
 			}
 		}
-		__syncthreads();
+//		__syncthreads();
 	}
 
 	working_states2[idx].end[0] = x;
@@ -423,22 +440,22 @@ __global__ void cuda_md5_workmod(uint64 seed)
 void cuda_device::cuda_fill_trail_buffer(uint32 id, uint64 seed,
 							vector<trail_type>& buf,
 							vector< pair<trail_type,trail_type> >& collisions, bool mod)
-{	
+{
 	// transfer results
-	cudaMemcpyFromSymbol(detail->buffer_host, buffer2, sizeof(trail_type)*detail->blocks*256);
-	
+	cudaMemcpyFromSymbol(detail->buffer_host, buffer2, sizeof(trail_type)*detail->blocks*detail->threadsperblock);
+
 	// start new cuda computation
 	if (!mod)
-		cuda_md5_work<<<detail->blocks, 256>>>(seed);
+		cuda_md5_work<<<detail->blocks, detail->threadsperblock>>>(seed);
 	else
-		cuda_md5_workmod<<<detail->blocks, 256>>>(seed);
-	
+		cuda_md5_workmod<<<detail->blocks, detail->threadsperblock>>>(seed);
+
 	// process and return results
 	buf.clear();
-	for (unsigned i = 0; i < detail->blocks*256; ++i)
+	for (unsigned i = 0; i < detail->blocks*detail->threadsperblock; ++i)
 		if (detail->buffer_host[i].len)
 			buf.push_back(detail->buffer_host[i]);
-}							
+}
 
 
 
@@ -485,8 +502,8 @@ void cuda_device::cuda_fill_trail_buffer(uint32 id, uint64 seed,
 		delete detail;
 	}
 
-	timer::timer(bool direct_start): running(false) 
-	{ 
+	timer::timer(bool direct_start): running(false)
+	{
 		detail = new timer_detail;
 #ifdef _WIN32
 		LARGE_INTEGER tmp_freq;
@@ -518,7 +535,7 @@ void cuda_device::cuda_fill_trail_buffer(uint32 id, uint64 seed,
 			LARGE_INTEGER tmp_end;
 			QueryPerformanceCounter(&tmp_end);
 			return (double(tmp_end.QuadPart) - double(detail->tstart.QuadPart))/detail->freq;
-		} else 
+		} else
 			return (double(detail->tend.QuadPart) - double(detail->tstart.QuadPart))/detail->freq;
 	}
 
@@ -589,7 +606,7 @@ int get_num_cuda_devices()
 	return deviceCount;
 }
 
-void cuda_device_query() 
+void cuda_device_query()
 {
     int deviceCount;
     cutilSafeCall(cudaGetDeviceCount(&deviceCount));
@@ -621,7 +638,7 @@ void cuda_device_query()
                8 * deviceProp.multiProcessorCount);
     #endif
         printf("  Total amount of constant memory:               %u bytes\n",
-               deviceProp.totalConstMem); 
+               deviceProp.totalConstMem);
         printf("  Total amount of shared memory per block:       %u bytes\n",
                deviceProp.sharedMemPerBlock);
         printf("  Total number of registers available per block: %d\n",
