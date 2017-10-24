@@ -21,6 +21,8 @@ Project HashClash - MD5 & SHA-1 cryptanalytic toolbox
   
   `BOOST_VERSION=1.65.1 BOOST_INSTALL_PREFIX=$(pwd)/boost-1.65.1 ./install_boost.sh`
   
+ - Optional: CUDA
+  
 ## Building
 
 - Build configure script
@@ -29,8 +31,8 @@ Project HashClash - MD5 & SHA-1 cryptanalytic toolbox
   
 - Run configure (with boost installed in `$(pwd)/local` by `install_boost.sh`)
 
-  `./configure --with-boost=$(pwd)/local`
-  
+  `./configure --with-boost=$(pwd)/local [--without-cuda|--with-cuda=/usr/local/cuda-X.X]`
+
 - Build programs
 
   `make`
