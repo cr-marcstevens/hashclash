@@ -34,10 +34,8 @@ bin_PROGRAMS=\
 	bin/sha1_diffpathbackward \
 	bin/sha1_diffpathconnect \
 	bin/sha1_diffpathhelper \
-	bin/sha1_attackgenerator
-
-EXTRA_PROGRAMS=\
-	bin/sha1_attack
+	bin/sha1_attackgenerator \
+	bin/sha1_nearcollisionattack
 
 AM_CPPFLAGS=-I$(top_srcdir)/lib
 LDADD=lib/libhashclash.la
@@ -118,7 +116,7 @@ bin_sha1_attackgenerator_SOURCES=\
 	src/sha1attackgenerator/main.hpp \
 	src/sha1attackgenerator/program_generator.cpp
 
-bin_sha1_attack_SOURCES=\
+bin_sha1_nearcollisionattack_SOURCES=\
 	src/sha1attackgenerator/collfind.cpp
 
 NVCCFLAGS=-ccbin $(CXX) -O2 -v --maxrregcount=32 --ptxas-options=-v
