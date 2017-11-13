@@ -234,7 +234,7 @@ unsigned load_block(istream& i, uint32 block[])
 			i.get(uc);
 			if (i) {
 				++len;
-				block[k] += uint32((unsigned char)(uc)) << (c*8);
+				block[k] += uint32((unsigned char)(uc)) << ((3-c)*8);
 			} else {
 				i.putback(uc);
 				i.setstate(ios::failbit);
@@ -248,5 +248,5 @@ void save_block(ostream& o, uint32 block[])
 {
 	for (unsigned k = 0; k < 16; ++k)
 		for (unsigned c = 0; c < 4; ++c)
-			o << (unsigned char)((block[k]>>(c*8))&0xFF);
+			o << (unsigned char)((block[k]>>((3-c)*8))&0xFF);
 }
