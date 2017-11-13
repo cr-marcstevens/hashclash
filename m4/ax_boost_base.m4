@@ -128,38 +128,48 @@ AC_DEFUN([_AX_BOOST_BASE_RUNDETECT],[
     dnl first we check the system location for boost libraries
     dnl this location ist chosen if boost libraries are installed with the --layout=system option
     dnl or if you install boost with RPM
-    AS_IF([test "x$_AX_BOOST_BASE_boost_path" != "x"],[
-        AC_MSG_CHECKING([for boostlib >= $1 ($WANT_BOOST_VERSION) includes in "$_AX_BOOST_BASE_boost_path/include"])
-         AS_IF([test -d "$_AX_BOOST_BASE_boost_path/include" && test -r "$_AX_BOOST_BASE_boost_path/include"],[
+    dnl AS_IF([test "x$_AX_BOOST_BASE_boost_path" != "x"],[
+
+    for _AX_BOOST_BASE_prefix_tmp in $_AX_BOOST_BASE_boost_path $(pwd)/boost-* ${HOME}/boost/boost-* /usr /usr/local /opt /opt/local ; do
+      if test -d $_AX_BOOST_BASE_prefix_tmp/include/boost ; then
+        AC_MSG_CHECKING([for boostlib >= $1 ($WANT_BOOST_VERSION) includes in "$_AX_BOOST_BASE_prefix_tmp/include"])
+        AS_IF([test -d "$_AX_BOOST_BASE_prefix_tmp/include/boost" && test -r "$_AX_BOOST_BASE_prefix_tmp/include/boost"],[
            AC_MSG_RESULT([yes])
-           BOOST_CPPFLAGS="-I$_AX_BOOST_BASE_boost_path/include"
-           for _AX_BOOST_BASE_boost_path_tmp in $multiarch_libsubdir $libsubdirs; do
-                AC_MSG_CHECKING([for boostlib >= $1 ($WANT_BOOST_VERSION) lib path in "$_AX_BOOST_BASE_boost_path/$_AX_BOOST_BASE_boost_path_tmp"])
-                AS_IF([test -d "$_AX_BOOST_BASE_boost_path/$_AX_BOOST_BASE_boost_path_tmp" && test -r "$_AX_BOOST_BASE_boost_path/$_AX_BOOST_BASE_boost_path_tmp" ],[
+           for _AX_BOOST_BASE_libdir in $multiarch_libsubdir $libsubdirs; do
+                AC_MSG_CHECKING([for boostlib >= $1 ($WANT_BOOST_VERSION) lib path in "$_AX_BOOST_BASE_prefix_tmp/$_AX_BOOST_BASE_libdir"])
+                AS_IF([test -d "$_AX_BOOST_BASE_prefix_tmp/$_AX_BOOST_BASE_libdir" && test -r "$_AX_BOOST_BASE_prefix_tmp/$_AX_BOOST_BASE_libdir" ],
+                [
                         AC_MSG_RESULT([yes])
-                        BOOST_LDFLAGS="-L$_AX_BOOST_BASE_boost_path/$_AX_BOOST_BASE_boost_path_tmp";
+			_AX_BOOST_BASE_prefix="$_AX_BOOST_BASE_prefix_tmp"
+                        BOOST_CPPFLAGS="-I$_AX_BOOST_BASE_prefix_tmp/include"
+                        BOOST_LDFLAGS="-L$_AX_BOOST_BASE_prefix_tmp/$_AX_BOOST_BASE_libdir";
                         break;
                 ],
-      [AC_MSG_RESULT([no])])
-           done],[
-      AC_MSG_RESULT([no])])
-    ],[
-        if test X"$cross_compiling" = Xyes; then
-            search_libsubdirs=$multiarch_libsubdir
-        else
-            search_libsubdirs="$multiarch_libsubdir $libsubdirs"
-        fi
-        for _AX_BOOST_BASE_boost_path_tmp in /usr /usr/local /opt /opt/local $(pwd)/local; do
-            if test -d "$_AX_BOOST_BASE_boost_path_tmp/include/boost" && test -r "$_AX_BOOST_BASE_boost_path_tmp/include/boost" ; then
-                for libsubdir in $search_libsubdirs ; do
-                    if ls "$_AX_BOOST_BASE_boost_path_tmp/$libsubdir/libboost_"* >/dev/null 2>&1 ; then break; fi
-                done
-                BOOST_LDFLAGS="-L$_AX_BOOST_BASE_boost_path_tmp/$libsubdir"
-                BOOST_CPPFLAGS="-I$_AX_BOOST_BASE_boost_path_tmp/include"
-                break;
-            fi
-        done
-    ])
+                [AC_MSG_RESULT([no])])
+           done
+        ],[
+           AC_MSG_RESULT([no])
+        ])
+      fi
+      if test "x$_AX_BOOST_BASE_prefix" != "x" ; then break; fi
+    done
+
+dnl        if test X"$cross_compiling" = Xyes; then
+dnl            search_libsubdirs=$multiarch_libsubdir
+dnl        else
+dnl            search_libsubdirs="$multiarch_libsubdir $libsubdirs"
+dnl        fi
+dnl        for _AX_BOOST_BASE_boost_path_tmp in /usr /usr/local /opt /opt/local $(pwd)/boost-*; do
+dnl            if test -d "$_AX_BOOST_BASE_boost_path_tmp/include/boost" && test -r "$_AX_BOOST_BASE_boost_path_tmp/include/boost" ; then
+dnl                for libsubdir in $search_libsubdirs ; do
+dnl                    if ls "$_AX_BOOST_BASE_boost_path_tmp/$libsubdir/libboost_"* >/dev/null 2>&1 ; then break; fi
+dnl                done
+dnl                BOOST_LDFLAGS="-L$_AX_BOOST_BASE_boost_path_tmp/$libsubdir"
+dnl                BOOST_CPPFLAGS="-I$_AX_BOOST_BASE_boost_path_tmp/include"
+dnl                break;
+dnl            fi
+dnl        done
+dnl    ])
 
     dnl overwrite ld flags if we have required special directory with
     dnl --with-boost-libdir parameter
@@ -197,42 +207,42 @@ AC_DEFUN([_AX_BOOST_BASE_RUNDETECT],[
             BOOST_LDFLAGS=
         fi
         _version=0
-        if test -n "$_AX_BOOST_BASE_boost_path" ; then
-            if test -d "$_AX_BOOST_BASE_boost_path" && test -r "$_AX_BOOST_BASE_boost_path"; then
-                for i in `ls -d $_AX_BOOST_BASE_boost_path/include/boost-* 2>/dev/null`; do
-                    _version_tmp=`echo $i | sed "s#$_AX_BOOST_BASE_boost_path##" | sed 's/\/include\/boost-//' | sed 's/_/./'`
+        if test -n "$_AX_BOOST_BASE_prefix" ; then
+            if test -d "$_AX_BOOST_BASE_prefix" && test -r "$_AX_BOOST_BASE_prefix"; then
+                for i in `ls -d $_AX_BOOST_BASE_prefix/include/boost-* 2>/dev/null`; do
+                    _version_tmp=`echo $i | sed "s#$_AX_BOOST_BASE_prefix##" | sed 's/\/include\/boost-//' | sed 's/_/./'`
                     V_CHECK=`expr $_version_tmp \> $_version`
                     if test "x$V_CHECK" = "x1" ; then
                         _version=$_version_tmp
                     fi
                     VERSION_UNDERSCORE=`echo $_version | sed 's/\./_/'`
-                    BOOST_CPPFLAGS="-I$_AX_BOOST_BASE_boost_path/include/boost-$VERSION_UNDERSCORE"
+                    BOOST_CPPFLAGS="-I$_AX_BOOST_BASE_prefix/include/boost-$VERSION_UNDERSCORE"
                 done
                 dnl if nothing found search for layout used in Windows distributions
                 if test -z "$BOOST_CPPFLAGS"; then
-                    if test -d "$_AX_BOOST_BASE_boost_path/boost" && test -r "$_AX_BOOST_BASE_boost_path/boost"; then
-                        BOOST_CPPFLAGS="-I$_AX_BOOST_BASE_boost_path"
+                    if test -d "$_AX_BOOST_BASE_prefix/boost" && test -r "$_AX_BOOST_BASE_prefix/boost"; then
+                        BOOST_CPPFLAGS="-I$_AX_BOOST_BASE_prefix"
                     fi
                 fi
                 dnl if we found something and BOOST_LDFLAGS was unset before
                 dnl (because "$_AX_BOOST_BASE_boost_lib_path" = ""), set it here.
                 if test -n "$BOOST_CPPFLAGS" && test -z "$BOOST_LDFLAGS"; then
                     for libsubdir in $libsubdirs ; do
-                        if ls "$_AX_BOOST_BASE_boost_path/$libsubdir/libboost_"* >/dev/null 2>&1 ; then break; fi
+                        if ls "$_AX_BOOST_BASE_prefix/$libsubdir/libboost_"* >/dev/null 2>&1 ; then break; fi
                     done
-                    BOOST_LDFLAGS="-L$_AX_BOOST_BASE_boost_path/$libsubdir"
+                    BOOST_LDFLAGS="-L$_AX_BOOST_BASE_prefix/$libsubdir"
                 fi
             fi
         else
             if test "x$cross_compiling" != "xyes" ; then
-                for _AX_BOOST_BASE_boost_path in /usr /usr/local /opt /opt/local $(pwd)/local ; do
-                    if test -d "$_AX_BOOST_BASE_boost_path" && test -r "$_AX_BOOST_BASE_boost_path" ; then
-                        for i in `ls -d $_AX_BOOST_BASE_boost_path/include/boost-* 2>/dev/null`; do
-                            _version_tmp=`echo $i | sed "s#$_AX_BOOST_BASE_boost_path##" | sed 's/\/include\/boost-//' | sed 's/_/./'`
+                for _AX_BOOST_BASE_prefix_tmp in $(pwd)/boost-* /usr /usr/local /opt /opt/local ; do
+                    if test -d "$_AX_BOOST_BASE_prefix_tmp" && test -r "$_AX_BOOST_BASE_prefix_tmp" ; then
+                        for i in `ls -d $_AX_BOOST_BASE_prefix_tmp/include/boost-* 2>/dev/null`; do
+                            _version_tmp=`echo $i | sed "s#$_AX_BOOST_BASE_prefix_tmp##" | sed 's/\/include\/boost-//' | sed 's/_/./'`
                             V_CHECK=`expr $_version_tmp \> $_version`
                             if test "x$V_CHECK" = "x1" ; then
                                 _version=$_version_tmp
-                                best_path=$_AX_BOOST_BASE_boost_path
+                                best_path=$_AX_BOOST_BASE_prefix_tmp
                             fi
                         done
                     fi
@@ -291,6 +301,11 @@ AC_DEFUN([_AX_BOOST_BASE_RUNDETECT],[
         ifelse([$3], , :, [$3])
     else
         AC_DEFINE(HAVE_BOOST,,[define if the Boost library is available])
+
+	for o in $CXX $CXXFLAGS; do
+		AS_IF([echo $o | $GREP "std=" > /dev/null], [AC_MSG_WARN([Compile boost libraries with $o option])], [])
+	done
+
         # execute ACTION-IF-FOUND (if present):
         ifelse([$2], , :, [$2])
     fi
