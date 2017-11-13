@@ -8,9 +8,11 @@ AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([foreign subdir-objects])
 
 
-DEFAULT_CXXFLAGS="-march=native -O3"
-
-CXXFLAGS=${CXXFLAGS:-$DEFAULT_CXXFLAGS}
+DEFAULT_CXXFLAGS="-O2"
+AS_IF([test "x$CXXFLAGS" = "x"],
+	[CXXFLAGS="$DEFAULT_CXXFLAGS"]
+	[usedefaultcxxflags=yes],
+	[usedefaultcxxflags=no])
 
 LT_INIT
 
@@ -29,6 +31,9 @@ AC_TYPE_UINT16_T
 AC_TYPE_UINT32_T
 AC_TYPE_UINT64_T
 AC_TYPE_UINT8_T
+
+AS_IF([test "x$cross_compiling" != "xyes" && test "x$usedefaultcxxflags" = "xyes" ],
+	[AX_CHECK_COMPILE_FLAG([-march=native], [CXXFLAGS="$CXXFLAGS -march=native"], [])])
 
 AX_PTHREAD()
 LIBS="$PTHREAD_LIBS $LIBS"

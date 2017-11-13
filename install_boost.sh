@@ -1,9 +1,27 @@
 #!/bin/bash
 
 : ${BOOST_VERSION:=1.57.0}
-: ${BOOST_BUILD_OPTIONS:=" -j4 --without-graph --without-graph_parallel --without-python --without-regex --without-wave "}
-: ${BOOST_BUILD_CXXFLAGS:="-march=native -O2 -std=c++11"}
-: ${BOOST_INSTALL_PREFIX:=$(pwd)/local}
+: ${BOOST_BUILD_OPTIONS:="-j4 --with-filesystem --with-iostreams --with-program_options --with-serialization --with-system --with-thread"}
+: ${BOOST_BUILD_CXXFLAGS:="-O2"}
+: ${BOOST_INSTALL_PREFIX:=$(pwd)/boost-$BOOST_VERSION}
+
+if [ ! -z $BOOST_TOOLSET ]; then
+	BOOST_BUILD_OPTIONS="$BUILD_OPTIONS toolset=$BOOST_TOOLSET"
+fi
+echo "Building boost version : $BOOST_VERSION"
+echo "Installing in directory: $BOOST_INSTALL_PREFIX"
+echo "Build options          : $BOOST_BUILD_OPTIONS"
+echo "CXXFLAGS               : $BOOST_BUILD_CXXFLAGS"
+if [ -f config.status ]; then
+	CXXSTD1=`grep -o "\-std=c++[0-9a-zA-Z]*" config.status 2>/dev/null | sort -u`
+	CXXSTD2=`echo $BOOST_BUILD_CXXFLAGS | grep -o "\-std=c++[0-9a-zA-Z]*"`
+	if [ "$CXXSTD1" != "$CXXSTD2" ]; then
+		echo "*** WARNING: detected use of $CXXSTD1 in config.status, add this flag to CXXFLAGS:"
+		echo "***    BOOST_BUILD_CXXFLAGS=\"$BOOST_BUILD_CXXFLAGS $CXXSTD1\" $0"
+	fi
+fi
+sleep 3
+echo "Starting in 3 seconds..."
 
 BOOST_DIRVERSION=`echo $BOOST_VERSION | tr . _`
 BOOST_DIR=boost_$BOOST_DIRVERSION
@@ -48,7 +66,7 @@ test_tar_gz_file $BOOST_FILE \
 # remove existing boost directory if present
 if [ -d $BOOST_DIR ]; then
 	echo -n "Removing old directory $BOOST_DIR..."
-	rm -rf $BOOST_DIR
+	rm -rf "$BOOST_DIR"
 	echo "done."
 fi
 
