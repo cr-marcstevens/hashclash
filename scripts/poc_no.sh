@@ -52,7 +52,7 @@ rm -r data
 mkdir -p data
 
 #create upper paths
-../bin/md5_diffpathbackward $diff -n -t $tmid -b $tmid 
+../bin/md5_diffpathbackward $diff -n -t $tmid -b $(($tmid+1))
 ../bin/md5_diffpathforward $diff $opts -t $((tmid+1)) -b $tmid --trange $((61-$tmid)) 2>&1 | tee upper.log
 ../bin/md5_diffpathforward $diff -a 16 -t 63 -b $tmid 2>&1 | tee -a upper.log
 
