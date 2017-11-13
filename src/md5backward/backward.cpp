@@ -51,6 +51,7 @@ void md5_backward_thread::md5_backward_differential_step(const differentialpath&
 
 	newpath = path;
 	newpath[int(t)-3].clear();
+	newpath[t+1];
 
 	unsigned totprecond = 0;
 	unsigned totcond = 0;
