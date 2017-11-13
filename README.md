@@ -14,11 +14,11 @@
 
   `sudo apt-get install zlib1g-dev libbz2-dev`
   
-- local boost C++ libraries **compiled with -std=c++11** (preferable version 1.57)
+- local boost C++ libraries (preferable version 1.57.0)
 
   `./install_boost.sh` 
 
-  Override default boost version 1.57 and/or installation directory as follows:
+  Override default boost version 1.57.0 and/or installation directory as follows:
   
   `BOOST_VERSION=1.65.1 BOOST_INSTALL_PREFIX=$HOME/boost/boost-1.65.1 ./install_boost.sh`
   
