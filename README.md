@@ -1,5 +1,4 @@
-# hashclash
-Project HashClash - MD5 & SHA-1 cryptanalytic toolbox
+# Project HashClash - MD5 & SHA-1 cryptanalytic toolbox
 
 ## Feedback & pingback appreciated
 
