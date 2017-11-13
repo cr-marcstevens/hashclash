@@ -20,7 +20,7 @@
 
   Override default boost version 1.57 and/or installation directory as follows:
   
-  `BOOST_VERSION=1.65.1 BOOST_INSTALL_PREFIX=$(pwd)/boost-1.65.1 ./install_boost.sh`
+  `BOOST_VERSION=1.65.1 BOOST_INSTALL_PREFIX=$HOME/boost/boost-1.65.1 ./install_boost.sh`
   
  - Optional: CUDA
   
@@ -30,9 +30,9 @@
 
   `autoreconf --install`
   
-- Run configure (with boost installed in `$(pwd)/local` by `install_boost.sh`)
+- Run configure (with boost installed in `$(pwd)/boost-VERSION` by `install_boost.sh`)
 
-  `./configure --with-boost=$(pwd)/local [--without-cuda|--with-cuda=/usr/local/cuda-X.X]`
+  `./configure --with-boost=$(pwd)/boost-1.57.0 [--without-cuda|--with-cuda=/usr/local/cuda-X.X]`
 
 - Build programs
 
