@@ -129,8 +129,8 @@ AS_VAR_PUSHDEF([_INP],[ac_prefix_conf_INP])dnl
 m4_pushdef([_script],[conftest.prefix])dnl
 m4_pushdef([_symbol],[m4_cr_Letters[]m4_cr_digits[]_])dnl
 _OUT=`echo m4_default([$1], [$PACKAGE-config.h])`
-_DEF=`echo _$_OUT | sed -e "y:m4_cr_letters:m4_cr_LETTERS[]:" -e "s/@<:@^m4_cr_Letters@:>@/_/g"`
 _PKG=`echo m4_default([$2], [$PACKAGE])`
+_DEF=`echo _$_PKG$_OUT | sed -e "y:m4_cr_letters:m4_cr_LETTERS[]:" -e "s/@<:@^m4_cr_Letters@:>@/_/g"`
 _LOW=`echo _$_PKG | sed -e "y:m4_cr_LETTERS-:m4_cr_letters[]_:"`
 _UPP=`echo $_PKG | sed -e "y:m4_cr_letters-:m4_cr_LETTERS[]_:"  -e "/^@<:@m4_cr_digits@:>@/s/^/_/"`
 _INP=`echo "$3" | sed -e 's/ *//'`
