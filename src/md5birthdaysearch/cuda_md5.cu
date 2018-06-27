@@ -24,6 +24,7 @@
 #include <string.h>
 #include <time.h>
 #include <cuda.h>
+#include <stdexcept>
 #include <boost/cstdint.hpp>
 
 using namespace std;
@@ -38,7 +39,7 @@ typedef boost::uint64_t uint64;
 #include "birthday_types.hpp"
 
 #ifndef CUDA_SAFE_CALL
-#define CUDA_SAFE_CALL(s) (s)
+#define CUDA_SAFE_CALL(s) { auto ce = s; if (ce != cudaSuccess) { throw std::runtime_error("CUDA API Error:\n" + std::string(cudaGetErrorName(ce)) + ":\n" + std::string(cudaGetErrorString(ce))); } }
 #endif
 
 #ifndef cutilSafeCall
@@ -602,13 +603,13 @@ void cuda_device::benchmark()
 int get_num_cuda_devices()
 {
 	int deviceCount = 0;
-	cudaGetDeviceCount(&deviceCount);
+	cutilSafeCall(cudaGetDeviceCount(&deviceCount));
 	return deviceCount;
 }
 
 void cuda_device_query()
 {
-    int deviceCount;
+    int deviceCount = 0;
     cutilSafeCall(cudaGetDeviceCount(&deviceCount));
     if (deviceCount == 0)
         printf("There is no device supporting CUDA\n");

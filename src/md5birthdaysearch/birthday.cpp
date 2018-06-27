@@ -771,8 +771,19 @@ void birthday(birthday_parameters& parameters)
 
 	int cuda_dev_cnt = 0;
 #ifdef HAVE_CUDA
-	if (parameters.cuda_enabled) 
-		cuda_dev_cnt = get_num_cuda_devices();
+	if (parameters.cuda_enabled)
+	{
+		try
+		{
+			cuda_dev_cnt = get_num_cuda_devices();
+		}
+		catch (std::exception& e)
+		{
+			std::cerr << "CUDA ERROR: " << e.what() << std::endl; 
+			cuda_dev_cnt = 0; 
+		}
+		std::cout << "Found " << cuda_dev_cnt << " CUDA devices." << std::endl;
+	}
 	// if possible save 1 cpucore for better cuda latency
 	if (parameters.threads > 1 && cuda_dev_cnt > 0 && parameters.threads == boost::thread::hardware_concurrency())
 		--parameters.threads;
