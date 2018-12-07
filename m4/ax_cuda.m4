@@ -91,16 +91,14 @@ then
 	
 	# test if architecture is 64 bits and NVCC version >= 2.3
         libdir=lib
-	if test "x$host_cpu" = xx86_64 ; then
-	   if test "x$NVCC_VERSION" \> "x2.2" ; then
-              libdir=lib64
-           fi
-	fi
-	if test "x$host_cpu" = xpowerpc64le ; then
-	   if test "x$NVCC_VERSION" \> "x2.2" ; then
-              libdir=lib64
-           fi
-	fi
+        AX_COMPARE_VERSION([$NVCC_VERSION],[gt],[2.2],[
+	    if test "x$host_cpu" = xx86_64 ; then
+	        libdir=lib64
+	    fi
+	    if test "x$host_cpu" = xpowerpc64le ; then
+	        libdir=lib64
+	    fi
+	])
 
 	# set CUDA flags
 	if test -n "$cuda_home_path"
