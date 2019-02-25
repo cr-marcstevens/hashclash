@@ -20,8 +20,8 @@ if [ -f config.status ]; then
 		echo "***    BOOST_BUILD_CXXFLAGS=\"$BOOST_BUILD_CXXFLAGS $CXXSTD1\" $0"
 	fi
 fi
-sleep 3
 echo "Starting in 3 seconds..."
+sleep 3
 
 BOOST_DIRVERSION=`echo $BOOST_VERSION | tr . _`
 BOOST_DIR=boost_$BOOST_DIRVERSION
