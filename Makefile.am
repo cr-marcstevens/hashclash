@@ -25,6 +25,7 @@ lib_libhashclash_la_SOURCES=\
 lib_libhashclash_la_LDFLAGS=-no-undefined
 
 bin_PROGRAMS=\
+	bin/md5_fastcoll \
 	bin/md5_diffpathforward \
 	bin/md5_diffpathbackward \
 	bin/md5_diffpathconnect \
@@ -39,6 +40,17 @@ bin_PROGRAMS=\
 
 AM_CPPFLAGS=-I$(top_srcdir)/lib
 LDADD=lib/libhashclash.la
+
+bin_md5_fastcoll_SOURCES=\
+	src/md5fastcoll/main.cpp \
+	src/md5fastcoll/md5.cpp \
+	src/md5fastcoll/block0.cpp \
+	src/md5fastcoll/block1.cpp \
+	src/md5fastcoll/block1wang.cpp \
+	src/md5fastcoll/block1stevens00.cpp \
+	src/md5fastcoll/block1stevens01.cpp \
+	src/md5fastcoll/block1stevens10.cpp \
+	src/md5fastcoll/block1stevens11.cpp
 
 bin_md5_diffpathforward_SOURCES=\
 	src/md5forward/dostep.cpp \
