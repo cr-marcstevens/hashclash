@@ -12,14 +12,16 @@ if [ "$1" = "" ]; then
 fi
 d="$1"
 
+rm -r "$d"
+
 cat Makefile \
 	| sed "s/^\(LDFLAGS =.*$\)/\1 -static -static-libstdc++/g" \
 	| sed "s/ -lcudart / -lcudart_static -ldl -lrt /" \
 	| sed "s/ -lcuda[ ]*$/ -Wl,-Bdynamic,-lcuda/" \
 	> Makefile.tmp
 	
-make -f Makefile.tmp clean
-make -f Makefile.tmp -j4
+AM_MAKEFLAGS="-f Makefile.tmp" make -f Makefile.tmp clean
+AM_MAKEFLAGS="-f Makefile.tmp" make -f Makefile.tmp -j4
 rm Makefile.tmp
 
 mkdir -p "$d/bin" "$d/scripts"
