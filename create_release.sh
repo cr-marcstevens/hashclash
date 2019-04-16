@@ -1,0 +1,29 @@
+#!/bin/bash
+
+if [ ! -f Makefile ]; then
+	echo "First run ./configure [--with-cuda=/usr/local/cuda-x.y]"
+	exit 1
+fi
+
+if [ "$1" = "" ]; then
+	echo "Usage: $0 <release-name>"
+	echo "e.g.:  $0 release-linux-v0"
+	exit 1
+fi
+d="$1"
+
+cat Makefile \
+	| sed "s/^\(LDFLAGS =.*$\)/\1 -static -static-libstdc++/g" \
+	| sed "s/ -lcudart / -lcudart_static -ldl -lrt /" \
+	| sed "s/ -lcuda[ ]*$/ -Wl,-Bdynamic,-lcuda/" \
+	> Makefile.tmp
+	
+make -f Makefile.tmp clean
+make -f Makefile.tmp -j4
+rm Makefile.tmp
+
+mkdir -p "$d/bin" "$d/scripts"
+cp bin/* "$d/bin/"
+cp scripts/*.sh "$d/scripts/"
+
+tar -cjvf "$d.tar.gz" "$d/"
