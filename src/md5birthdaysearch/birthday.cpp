@@ -305,14 +305,21 @@ void find_collision(const trail_type& trail1, const trail_type& trail2)
 		swap(ob2, ob1);
 		swap(oc2, oc1);
 	}
-	msg1[13] = oc1; msg1[14] = oa1; msg1[15] = ob1;
+	uint32 lmsg1[16];
+	uint32 lmsg2[16];
+	for (unsigned i = 0; i < 13; ++i)
+	{
+		lmsg1[i] = msg1[i];
+		lmsg2[i] = msg2[i];
+	}
+	lmsg1[13] = oc1; lmsg1[14] = oa1; lmsg1[15] = ob1;
 	ihvmsg1[0] = ihv1[0]; ihvmsg1[1] = ihv1[1]; 
 	ihvmsg1[2] = ihv1[2]; ihvmsg1[3] = ihv1[3];
-	md5compress(ihvmsg1, msg1);
-	msg2[13] = oc2; msg2[14] = oa2; msg2[15] = ob2;
+	md5compress(ihvmsg1, lmsg1);
+	lmsg2[13] = oc2; lmsg2[14] = oa2; lmsg2[15] = ob2;
 	ihvmsg2[0] = ihv2[0]; ihvmsg2[1] = ihv2[1]; 
 	ihvmsg2[2] = ihv2[2]; ihvmsg2[3] = ihv2[3];
-	md5compress(ihvmsg2, msg2);
+	md5compress(ihvmsg2, lmsg2);
 	uint32 dihv[4] = { ihvmsg2[0]-ihvmsg1[0], ihvmsg2[1]-ihvmsg1[1],
 					   ihvmsg2[2]-ihvmsg1[2], ihvmsg2[3]-ihvmsg1[3] };
 
@@ -340,12 +347,15 @@ void find_collision(const trail_type& trail1, const trail_type& trail2)
 		if (dihv[0] != 0 && dihv[2] != dihv[3])
 		{
 			cerr << "dihv fails assumptions" << endl;
-			throw;
+			return;
+//			throw;
 		}
 		n = nrblocks(dihv);
 	}
 	LOCK_GLOBAL_MUTEX;
 	++collusefull;
+	if (quit == true)
+		return;
 
 	if (n < bestnrblocks) {
 		bestnrblocks = n;

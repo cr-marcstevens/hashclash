@@ -133,13 +133,13 @@ bool cuda_device::init(uint32 device, const uint32 ihv1b[4], const uint32 ihv2b[
 		minblockspermp += 1;
 
 	detail->threadsperblock = ((maxthreadspermp / minblockspermp) / 32) * 32;
-	detail->blocks = minblockspermp * deviceProp.multiProcessorCount;
+	detail->blocks = minblockspermp * deviceProp.multiProcessorCount * 2;
 	cout << "Using " << detail->blocks << " blocks with " << detail->threadsperblock << " threads each: total " << detail->blocks * detail->threadsperblock << " threads." << endl;
 
 	CUDA_SAFE_CALL( cudaSetDevice(device) );
 	CUDA_SAFE_CALL( cudaSetDeviceFlags( cudaDeviceBlockingSync ) );
 
-	CUDA_SAFE_CALL( cudaMallocHost( (void**)(&(detail->buffer_host)), 122880 * sizeof(trail_type) ) );
+	CUDA_SAFE_CALL( cudaMallocHost( (void**)(&(detail->buffer_host)), detail->blocks * detail->threadsperblock * sizeof(trail_type) ) );
 
 	uint32 pc1[4], pc2[4];
 	uint32 a = ihv1b[0], b = ihv1b[1], c = ihv1b[2], d = ihv1b[3];
