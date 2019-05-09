@@ -28,4 +28,4 @@ mkdir -p "$d/bin" "$d/scripts"
 cp bin/* "$d/bin/"
 cp scripts/*.sh "$d/scripts/"
 
-tar -cjvf "$d.tar.gz" "$d/"
+tar -czvf "$d.tar.gz" "$d/"
