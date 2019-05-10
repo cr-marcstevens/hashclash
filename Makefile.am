@@ -86,7 +86,9 @@ bin_md5_birthdaysearch_SOURCES=\
 	src/md5birthdaysearch/main.cpp \
 	src/md5birthdaysearch/main.hpp \
 	src/md5birthdaysearch/storage.cpp \
-	src/md5birthdaysearch/storage.hpp
+	src/md5birthdaysearch/storage.hpp \
+	src/md5birthdaysearch/simd_avx256.cpp
+
 if HAVE_CUDA
 bin_md5_birthdaysearch_SOURCES+=\
 	src/md5birthdaysearch/cuda_md5.cu

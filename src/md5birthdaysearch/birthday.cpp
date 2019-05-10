@@ -135,7 +135,7 @@ void precomputestate(uint32 ihv[4], uint32 block[16])
 }
 
 // LOCK_GLOBAL_MUTEX not needed
-inline void birthday_step(uint32& x, uint32& y, uint32& z)
+void birthday_step(uint32& x, uint32& y, uint32& z)
 {
 	uint32* block;
 	uint32* precomp;
@@ -542,9 +542,11 @@ struct birthday_thread {
 	uint32 id;
 	int _cuda_device_nr;
 	cuda_device _cuda_device;
+	simd_device_avx256 _simd_device;
+	bool _nosimd;
 	
 	birthday_thread(int cuda_device_nr = -1)
-		: _cuda_device_nr(cuda_device_nr), id(id_counter++)
+		: _cuda_device_nr(cuda_device_nr), id(id_counter++), _nosimd(false)
 	{}
 
 	void loop_cuda(bool single = false)
@@ -582,6 +584,57 @@ struct birthday_thread {
 		}
 	}
 
+	void loop_simd(bool single = false)
+	{
+		vector<trail_type> work;
+		vector< pair<trail_type, trail_type> > collisions;
+		bool verified = false;
+		while (true)
+		{
+			uint64 seed;
+			{
+				LOCK_GLOBAL_MUTEX;
+				seed = uint64(xrng128()) + (uint64(xrng128())<<32)+1111*procmodi;
+				xrng128();
+				xrng128();
+				main_storage.get_birthdaycollisions(collisions);
+
+				if (quit) return;
+			}
+
+			// insert the trails into the trail hash
+			if (collisions.size() > 0)
+			{
+				for (unsigned i = 0; i < collisions.size(); ++i)
+					find_collision(collisions[i].first, collisions[i].second);
+				collisions.clear();
+			}
+			else {
+				work.clear();
+				_simd_device.fill_trail_buffer(seed, work, bool(maxblocks == 1));
+				if (!verified && !work.empty())
+				{
+					trail_type tmp = work[0];
+					tmp.len = 0;
+					generate_trail(tmp);
+					if (tmp != work[0])
+					{
+						// found an error: disable SIMD and switch back to normal loop
+						_nosimd = true;
+						loop(single);
+						return;
+					}
+					verified = true;
+				}
+				LOCK_GLOBAL_MUTEX;
+				for (unsigned i = 0; i < work.size(); ++i) 
+					distribute_trail(work[i]);
+			}
+			if (single)
+				break;
+		}
+	}
+
 	void loop(bool single = false)
 	{
 #ifdef HAVE_CUDA
@@ -590,6 +643,13 @@ struct birthday_thread {
 			return;
 		}
 #endif // CUDA
+
+		if (!_nosimd)
+		{
+			loop_simd(single);
+			return;
+		}
+
 		vector<trail_type> work(256);
 		vector< pair<trail_type,trail_type> > collisions;
 		while (true)
@@ -648,7 +708,13 @@ struct birthday_thread {
 //					_cuda_device.benchmark();
 				} else 
 #endif // CUDA
-				cout << "Thread " << id << " created." << endl;
+				if (_simd_device.init(ihv1, ihv2, ihv2mod, precomp1, precomp2, msg1, msg2, hybridmask, distinguishedpointmask, maximumpathlength))
+					cout << "Thread " << id << " created (AVX256)." << endl;
+				else
+				{
+					_nosimd = true;
+					cout << "Thread " << id << " created." << endl;
+				}
 			}
 			loop();
 			cout << "Thread " << id << " exited.          " << endl;
@@ -736,6 +802,9 @@ void birthday(birthday_parameters& parameters)
 		uint64 tmp = (maxtrails*sizeof(trail_type))>>19;
 		parameters.maxmemory = unsigned(tmp);
 	}
+	cout << "Maximum of near-collision blocks: " << parameters.maxblocks << endl;
+	cout << "Differential Path Type range: " << parameters.pathtyperange << endl;
+	cout << "Hybrid bits: " << parameters.hybridbits << endl;
 	cout << "Maximum amount of memory in MB for trails: " << parameters.maxmemory << " (local: " << parameters.maxmemory/parameters.modn << ")" << endl;
 	cout << "Estimated number of trails that will be stored:    " << maxtrails << " (local: " << maxtrails/parameters.modn << ")" << endl;
 	cout << "Estimated number of trails that will be generated: " << uint64(pow(double(2),estcomplexity-parameters.logpathlength)) << endl;

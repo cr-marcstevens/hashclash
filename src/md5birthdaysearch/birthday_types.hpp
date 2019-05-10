@@ -83,4 +83,13 @@ private:
 	cuda_device_detail* detail;
 };
 
+class simd_avx256_detail;
+class simd_device_avx256 {
+public:
+	bool init(const uint32 ihv1[4], const uint32 ihv2[4], const uint32 ihv2mod[4], const uint32 precomp1[4], const uint32 precomp2[4], const uint32 msg1[16], const uint32 msg2[16], uint32 hmask, uint32 dpmask, uint32 maxlen);
+	void fill_trail_buffer(uint64 seed, vector<trail_type>& buffer, bool mod = false);
+private:
+	simd_avx256_detail* detail;
+};
+
 #endif // BIRTHDAY_TYPES_HPP
