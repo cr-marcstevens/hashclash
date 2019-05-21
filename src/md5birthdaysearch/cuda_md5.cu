@@ -26,6 +26,7 @@
 #include <cuda.h>
 #include <stdexcept>
 #include <boost/cstdint.hpp>
+#include "cuda_cyclicbuffer.hpp"
 
 using namespace std;
 
@@ -33,6 +34,8 @@ typedef boost::uint32_t uint32;
 typedef boost::uint64_t uint64;
 
 #define MAX_CUDA_THREADS (1<<20)
+#define MAX_CUDA_BLOCKS 256
+#define MAX_CUDA_THREADS_PER_BLOCK 2048
 #define REGISTERS_PER_CUDA_THREAD 32
 
 #define TRAIL_NOCONSTRUCTOR
@@ -46,21 +49,51 @@ typedef boost::uint64_t uint64;
 #define cutilSafeCall(s) (s)
 #endif
 
+
+/****
+  NOTE WARNING: 
+  We assume that all global __device__ variables below are *thread* *specific*
+ (instead of global) storage managed by the cuda realtime libraries 
+*****/
+// last template parameter is fence type: 0=none, 1=block, 2=gpu
+typedef cyclic_buffer_mask_t<MAX_CUDA_THREADS,uint32,7,cyclic_buffer_control_mask_t<MAX_CUDA_THREADS>,2> state_buffer_t;
+typedef cyclic_buffer_mask_t<MAX_CUDA_THREADS_PER_BLOCK,uint32,7,cyclic_buffer_control_mask_t<MAX_CUDA_THREADS_PER_BLOCK>,1> work_buffer_t;
+typedef work_buffer_t::control_t work_control_t;
+typedef cyclic_buffer_mask_t<MAX_CUDA_THREADS_PER_BLOCK,uint32,14,cyclic_buffer_control_mask_t<MAX_CUDA_THREADS_PER_BLOCK>,1> collisions_buffer_t;
+typedef collisions_buffer_t::control_t collisions_control_t;
+
+__device__ state_buffer_t gworking_states;
+
+__device__ work_buffer_t gtrailsout_buf[MAX_CUDA_BLOCKS];
+__device__ work_control_t gtrailsout_ctl[MAX_CUDA_BLOCKS];
+__shared__ work_control_t gtrailsout_ctlblock;
+
+/*
+__device__ collisions_buffer_t gcollisionsin_buf[MAX_CUDA_BLOCKS];
+__device__ collisions_buffer_t gcollisionsout_buf[MAX_CUDA_BLOCKS];
+__device__ collisions_control_t gcollisionsin_ctl[MAX_CUDA_BLOCKS];
+__device__ collisions_control_t gcollisionsout_ctl[MAX_CUDA_BLOCKS];
+__shared__ collisions_control_t gcollisionsin_ctlblock;
+__shared__ collisions_control_t gcollisionsout_ctlblock;
+*/
+
+__constant__ uint32 msg1[16], msg2[16], ihv1[4], ihv2[4], ihv2mod[4];
+__constant__ uint32 precomp1[4], precomp2[4];
+__constant__ uint32 hybridmask, distinguishedpointmask, maximumpathlength;
+
+
 class cuda_device_detail {
 public:
 	uint32 device;
 	uint32 blocks;
 	uint32 threadsperblock;
-	trail_type* buffer_host;
+	work_buffer_t* trailsout_buf;//[MAX_CUDA_BLOCKS];
+	work_control_t* trailsout_ctl;//[MAX_CUDA_BLOCKS];
+	collisions_buffer_t* collisionsin_buf;//[MAX_CUDA_BLOCKS];
+	collisions_control_t* collisionsin_ctl;//[MAX_CUDA_BLOCKS];
+	collisions_buffer_t* collisionsout_buf;//[MAX_CUDA_BLOCKS];
+	collisions_control_t* collisionsout_ctl;//[MAX_CUDA_BLOCKS];
 };
-
-/* We assume that these are _thread specific_ (instead of global) storage managed by the cuda realtime libraries */
-__device__ trail_type working_states2[MAX_CUDA_THREADS];
-__device__ trail_type buffer2[MAX_CUDA_THREADS];
-
-__constant__ uint32 msg1[16], msg2[16], ihv1[4], ihv2[4], ihv2mod[4];
-__constant__ uint32 precomp1[4], precomp2[4];
-__constant__ uint32 hybridmask, distinguishedpointmask, maximumpathlength;
 
 
 /* F, G and H are basic MD5 functions: selection, majority, parity */
@@ -96,11 +129,31 @@ __constant__ uint32 hybridmask, distinguishedpointmask, maximumpathlength;
   }
 
 
+__device__ void backup_controls()
+{
+	__syncthreads();
+	if (threadIdx.x == 0)
+	{
+		gtrailsout_ctlblock = gtrailsout_ctl[blockIdx.x];
+	}
+	__syncthreads();
+}
+
+__device__ void restore_controls()
+{
+	__syncthreads();
+	if (threadIdx.x == 0)
+	{
+		 gtrailsout_ctl[blockIdx.x] = gtrailsout_ctlblock;
+	}
+	__syncthreads();
+}
+
+
 __global__ void cuda_md5_init()
 {
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
-	working_states2[idx].len = 0;
-	buffer2[idx].len = 0;
+	gworking_states.get_ref<6>(idx) = 0; // len = 0
 }
 
 bool cuda_device::init(uint32 device, const uint32 ihv1b[4], const uint32 ihv2b[4], const uint32 ihv2modb[4], const uint32 msg1b[16], const uint32 msg2b[16], uint32 hmask, uint32 dpmask, uint32 maxlen)
@@ -139,7 +192,21 @@ bool cuda_device::init(uint32 device, const uint32 ihv1b[4], const uint32 ihv2b[
 	CUDA_SAFE_CALL( cudaSetDevice(device) );
 	CUDA_SAFE_CALL( cudaSetDeviceFlags( cudaDeviceBlockingSync ) );
 
-	CUDA_SAFE_CALL( cudaMallocHost( (void**)(&(detail->buffer_host)), detail->blocks * detail->threadsperblock * sizeof(trail_type) ) );
+//	work_buffer_t* trailsout_buf;//[MAX_CUDA_BLOCKS];
+//	work_control_t* trailsout_ctl;//[MAX_CUDA_BLOCKS];
+//	collisions_buffer_t* collisionsin_buf;//[MAX_CUDA_BLOCKS];
+//	collisions_control_t* collisionsin_ctl;//[MAX_CUDA_BLOCKS];
+//	collisions_buffer_t* collisionsout_buf;//[MAX_CUDA_BLOCKS];
+//	collisions_control_t* collisionsout_ctl;//[MAX_CUDA_BLOCKS];
+	CUDA_SAFE_CALL( cudaMallocHost( (void**)(&(detail->trailsout_buf)), detail->blocks * sizeof(work_buffer_t) ) );
+	CUDA_SAFE_CALL( cudaMallocHost( (void**)(&(detail->trailsout_ctl)), detail->blocks * sizeof(work_control_t) ) );
+	CUDA_SAFE_CALL( cudaMallocHost( (void**)(&(detail->collisionsin_buf)), detail->blocks * sizeof(collisions_buffer_t) ) );
+	CUDA_SAFE_CALL( cudaMallocHost( (void**)(&(detail->collisionsin_ctl)), detail->blocks * sizeof(collisions_control_t) ) );
+	CUDA_SAFE_CALL( cudaMallocHost( (void**)(&(detail->collisionsout_buf)), detail->blocks * sizeof(collisions_buffer_t) ) );
+	CUDA_SAFE_CALL( cudaMallocHost( (void**)(&(detail->collisionsout_ctl)), detail->blocks * sizeof(collisions_control_t) ) );
+
+//	CUDA_SAFE_CALL( cudaMallocHost( (void**)(&(detail->buffer_host)), detail->blocks * detail->threadsperblock * sizeof(trail_type) ) );
+//	CUDA_SAFE_CALL( cudaMallocHost( (void**)(&(detail->collisions_host)), detail->blocks * detail->threadsperblock * sizeof(trail_type)*2 ) );
 
 	uint32 pc1[4], pc2[4];
 	uint32 a = ihv1b[0], b = ihv1b[1], c = ihv1b[2], d = ihv1b[3];
@@ -184,29 +251,39 @@ bool cuda_device::init(uint32 device, const uint32 ihv1b[4], const uint32 ihv2b[
 	CUDA_SAFE_CALL( cudaMemcpyToSymbol(distinguishedpointmask, &dpmask, sizeof(dpmask)) );
 	CUDA_SAFE_CALL( cudaMemcpyToSymbol(maximumpathlength, &maxlen, sizeof(maxlen)) );
 
+	for (unsigned b = 0; b < detail->blocks; ++b)
+		detail->trailsout_ctl[b].reset();
+//	gtrailsout_ctl.reset();
+//	gcollisionsin_ctl.reset();
+//	gcollisionsout_ctl.reset();
+
 	cuda_md5_init<<<detail->blocks, detail->threadsperblock>>>();
 
 	return true;
 }
 
+
+
+
+template<bool mod = false>
 __global__ void cuda_md5_work(uint64 seed)
 {
+	restore_controls();
+
 	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
-	buffer2[idx].len = 0;
-	uint32 len = working_states2[idx].len;
-	uint32 x = working_states2[idx].end[0];
-	uint32 y = working_states2[idx].end[1];
-	uint32 z = working_states2[idx].end[2];
+	uint32 len = gworking_states.get<6>(idx);
+	uint32 x = gworking_states.get<3>(idx); //end[0]
+	uint32 y = gworking_states.get<4>(idx); //end[1]
+	uint32 z = gworking_states.get<5>(idx); //end[2]
 	if (len >= maximumpathlength || len == 0) {
 		x = uint32(seed>>32) ^ threadIdx.x;
 		y = uint32(seed) ^ blockIdx.x;
 		z = 0;
-		working_states2[idx].start[0] = x;
-		working_states2[idx].start[1] = y;
-		working_states2[idx].start[2] = z;
+		gworking_states.get_ref<0>(idx) = x;
+		gworking_states.get_ref<1>(idx) = y;
+		gworking_states.get_ref<2>(idx) = z;
 		len = 0;
 	}
-//	__syncthreads();
 
 	for (unsigned j = 0; j < 0x100; ++j)
 	{
@@ -272,190 +349,112 @@ __global__ void cuda_md5_work(uint64 seed)
 			MD5_II ( c, d, a, b, in[ 2], 15,  718787259); /* 63 */
 			MD5_II ( b, c, d, a, in[ 9], 21, 3951481745); /* 64 */
 
-			if (x <= y) {
-				a += ihv1[0];
-				b += ihv1[1];
-				c += ihv1[2];
-				d += ihv1[3];
-			} else {
-				a += ihv2mod[0];
-				b += ihv2mod[1];
-				c += ihv2mod[2];
-				d += ihv2mod[3];
+			if (mod)
+			{
+				if (x <= y) {
+					x = a + ihv1[0];
+					y = d + ihv1[3];
+					z = (c + ihv1[2]) & hybridmask;
+				} else {
+					x = a + ihv2mod[0];
+					y = d + ihv2mod[3];
+					z = (c + ihv2mod[2]) & hybridmask;
+				}
 			}
-			x = a;
-			y = d - c;
-			z = (d - b) & hybridmask;
-			++len;
-		}
-
-		{
-			if (0 == (x & distinguishedpointmask)) {
-				buffer2[idx].end[0] = x;
-				buffer2[idx].end[1] = y;
-				buffer2[idx].end[2] = z;
-				buffer2[idx].len = len;
-				buffer2[idx].start[0] = working_states2[idx].start[0];
-				buffer2[idx].start[1] = working_states2[idx].start[1];
-				buffer2[idx].start[2] = working_states2[idx].start[2];
-				x = uint32(seed>>32) ^ (threadIdx.x<<16) + len;
-				y = uint32(seed) ^ blockIdx.x;
-				z = 0;
-				len = 0;
-				working_states2[idx].start[0] = x;
-				working_states2[idx].start[1] = y;
-				working_states2[idx].start[2] = z;
-			}
-		}
-//		__syncthreads();
-	}
-
-	working_states2[idx].end[0] = x;
-	working_states2[idx].end[1] = y;
-	working_states2[idx].end[2] = z;
-	working_states2[idx].len = len;
-}
-
-
-__global__ void cuda_md5_workmod(uint64 seed)
-{
-	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
-	buffer2[idx].len = 0;
-	uint32 len = working_states2[idx].len;
-	uint32 x = working_states2[idx].end[0];
-	uint32 y = working_states2[idx].end[1];
-	uint32 z = working_states2[idx].end[2];
-	if (len >= maximumpathlength || len == 0) {
-		x = uint32(seed>>32) ^ threadIdx.x;
-		y = uint32(seed) ^ blockIdx.x;
-		z = 0;
-		working_states2[idx].start[0] = x;
-		working_states2[idx].start[1] = y;
-		working_states2[idx].start[2] = z;
-		len = 0;
-	}
-//	__syncthreads();
-
-	for (unsigned j = 0; j < 0x100; ++j)
-	{
-		{
-			uint32* in = msg1;
-			uint32 a = precomp1[0], b = precomp1[1], c = precomp1[2], d = precomp1[3];
-			if (x > y) {
-				in = msg2;
-				a = precomp2[0]; b = precomp2[1]; c = precomp2[2]; d = precomp2[3];
-			}
-			MD5_FF ( d, a, b, c, z, 12, 4254626195); /* 14 */
-			MD5_FF ( c, d, a, b, x, 17, 2792965006); /* 15 */
-			MD5_FF ( b, c, d, a, y, 22, 1236535329); /* 16 */
-
-			MD5_GG ( a, b, c, d, in[ 1],  5, 4129170786); /* 17 */
-			MD5_GG ( d, a, b, c, in[ 6],  9, 3225465664); /* 18 */
-			MD5_GG ( c, d, a, b, in[11], 14,  643717713); /* 19 */
-			MD5_GG ( b, c, d, a, in[ 0], 20, 3921069994); /* 20 */
-			MD5_GG ( a, b, c, d, in[ 5],  5, 3593408605); /* 21 */
-			MD5_GG ( d, a, b, c, in[10],  9,   38016083); /* 22 */
-			MD5_GG ( c, d, a, b, y, 14, 3634488961); /* 23 */
-			MD5_GG ( b, c, d, a, in[ 4], 20, 3889429448); /* 24 */
-			MD5_GG ( a, b, c, d, in[ 9],  5,  568446438); /* 25 */
-			MD5_GG ( d, a, b, c, x,  9, 3275163606); /* 26 */
-			MD5_GG ( c, d, a, b, in[ 3], 14, 4107603335); /* 27 */
-			MD5_GG ( b, c, d, a, in[ 8], 20, 1163531501); /* 28 */
-			MD5_GG ( a, b, c, d, z,  5, 2850285829); /* 29 */
-			MD5_GG ( d, a, b, c, in[ 2],  9, 4243563512); /* 30 */
-			MD5_GG ( c, d, a, b, in[ 7], 14, 1735328473); /* 31 */
-			MD5_GG ( b, c, d, a, in[12], 20, 2368359562); /* 32 */
-
-			MD5_HH ( a, b, c, d, in[ 5],  4, 4294588738); /* 33 */
-			MD5_HH ( d, a, b, c, in[ 8], 11, 2272392833); /* 34 */
-			MD5_HH ( c, d, a, b, in[11], 16, 1839030562); /* 35 */
-			MD5_HH ( b, c, d, a, x, 23, 4259657740); /* 36 */
-			MD5_HH ( a, b, c, d, in[ 1],  4, 2763975236); /* 37 */
-			MD5_HH ( d, a, b, c, in[ 4], 11, 1272893353); /* 38 */
-			MD5_HH ( c, d, a, b, in[ 7], 16, 4139469664); /* 39 */
-			MD5_HH ( b, c, d, a, in[10], 23, 3200236656); /* 40 */
-			MD5_HH ( a, b, c, d, z,  4,  681279174); /* 41 */
-			MD5_HH ( d, a, b, c, in[ 0], 11, 3936430074); /* 42 */
-			MD5_HH ( c, d, a, b, in[ 3], 16, 3572445317); /* 43 */
-			MD5_HH ( b, c, d, a, in[ 6], 23,   76029189); /* 44 */
-			MD5_HH ( a, b, c, d, in[ 9],  4, 3654602809); /* 45 */
-			MD5_HH ( d, a, b, c, in[12], 11, 3873151461); /* 46 */
-			MD5_HH ( c, d, a, b, y, 16,  530742520); /* 47 */
-			MD5_HH ( b, c, d, a, in[ 2], 23, 3299628645); /* 48 */
-
-			MD5_II ( a, b, c, d, in[ 0],  6, 4096336452); /* 49 */
-			MD5_II ( d, a, b, c, in[ 7], 10, 1126891415); /* 50 */
-			MD5_II ( c, d, a, b, x, 15, 2878612391); /* 51 */
-			MD5_II ( b, c, d, a, in[ 5], 21, 4237533241); /* 52 */
-			MD5_II ( a, b, c, d, in[12],  6, 1700485571); /* 53 */
-			MD5_II ( d, a, b, c, in[ 3], 10, 2399980690); /* 54 */
-			MD5_II ( c, d, a, b, in[10], 15, 4293915773); /* 55 */
-			MD5_II ( b, c, d, a, in[ 1], 21, 2240044497); /* 56 */
-			MD5_II ( a, b, c, d, in[ 8],  6, 1873313359); /* 57 */
-			MD5_II ( d, a, b, c, y, 10, 4264355552); /* 58 */
-			MD5_II ( c, d, a, b, in[ 6], 15, 2734768916); /* 59 */
-			MD5_II ( b, c, d, a, z, 21, 1309151649); /* 60 */
-			MD5_II ( a, b, c, d, in[ 4],  6, 4149444226); /* 61 */
-			MD5_II ( d, a, b, c, in[11], 10, 3174756917); /* 62 */
-			MD5_II ( c, d, a, b, in[ 2], 15,  718787259); /* 63 */
-
-			if (x <= y) {
-				x = a + ihv1[0];
-				y = d + ihv1[3];
-				z = (c + ihv1[2]) & hybridmask;
-			} else {
-				x = a + ihv2mod[0];
-				y = d + ihv2mod[3];
-				z = (c + ihv2mod[2]) & hybridmask;
+			else
+			{
+				if (x <= y) {
+					a += ihv1[0];
+					b += ihv1[1];
+					c += ihv1[2];
+					d += ihv1[3];
+				} else {
+					a += ihv2mod[0];
+					b += ihv2mod[1];
+					c += ihv2mod[2];
+					d += ihv2mod[3];
+				}
+				x = a;
+				y = d - c;
+				z = (d - b) & hybridmask;
 			}
 			++len;
 		}
 
 		{
-			if (0 == (x & distinguishedpointmask)) {
-				buffer2[idx].end[0] = x;
-				buffer2[idx].end[1] = y;
-				buffer2[idx].end[2] = z;
-				buffer2[idx].len = len;
-				buffer2[idx].start[0] = working_states2[idx].start[0];
-				buffer2[idx].start[1] = working_states2[idx].start[1];
-				buffer2[idx].start[2] = working_states2[idx].start[2];
+			// conditionally write
+			bool done = (0 == (x & distinguishedpointmask));
+			gtrailsout_buf[blockIdx.x].write(gtrailsout_ctlblock, done,
+				gworking_states.get_ref<0>(idx),
+				gworking_states.get_ref<1>(idx),
+				gworking_states.get_ref<2>(idx),
+				x, y, z, len
+				);
+			if (done)
+			{
 				x = uint32(seed>>32) ^ (threadIdx.x<<16) + len;
 				y = uint32(seed) ^ blockIdx.x;
 				z = 0;
 				len = 0;
-				working_states2[idx].start[0] = x;
-				working_states2[idx].start[1] = y;
-				working_states2[idx].start[2] = z;
+				gworking_states.get_ref<0>(idx) = x;
+				gworking_states.get_ref<1>(idx) = y;
+				gworking_states.get_ref<2>(idx) = z;
 			}
 		}
 //		__syncthreads();
 	}
 
-	working_states2[idx].end[0] = x;
-	working_states2[idx].end[1] = y;
-	working_states2[idx].end[2] = z;
-	working_states2[idx].len = len;
+	gworking_states.get_ref<3>(idx) = x;
+	gworking_states.get_ref<4>(idx) = y;
+	gworking_states.get_ref<5>(idx) = z;
+	gworking_states.get_ref<6>(idx) = len;
+	backup_controls();
 }
+
+
 
 void cuda_device::cuda_fill_trail_buffer(uint32 id, uint64 seed,
 							vector<trail_type>& buf,
 							vector< pair<trail_type,trail_type> >& collisions, bool mod)
 {
-	// transfer results
-	cudaMemcpyFromSymbol(detail->buffer_host, buffer2, sizeof(trail_type)*detail->blocks*detail->threadsperblock);
+//	CUDA_SAFE_CALL( cudaMallocHost( (void**)(&(detail->trailsout_buf)), detail->blocks * sizeof(work_buffer_t) ) );
+//	CUDA_SAFE_CALL( cudaMallocHost( (void**)(&(detail->trailsout_ctl)), detail->blocks * sizeof(work_control_t) ) );
 
-	// start new cuda computation
-	if (!mod)
-		cuda_md5_work<<<detail->blocks, detail->threadsperblock>>>(seed);
+	// send control structures to GPU
+	cudaMemcpyToSymbol(gtrailsout_ctl, detail->trailsout_ctl, detail->blocks * sizeof(work_control_t));
+
+	// run GPU code
+	if (mod)
+		cuda_md5_work<true><<<detail->blocks, detail->threadsperblock>>>(seed);
 	else
-		cuda_md5_workmod<<<detail->blocks, detail->threadsperblock>>>(seed);
+		cuda_md5_work<false><<<detail->blocks, detail->threadsperblock>>>(seed);
+
+	// retrieve control structures from GPU
+	cudaMemcpyFromSymbol(detail->trailsout_ctl, gtrailsout_ctl, detail->blocks * sizeof(work_control_t));
+	// retrieve store buffers from GPU
+	cudaMemcpyFromSymbol(detail->trailsout_buf, gtrailsout_buf, detail->blocks * sizeof(work_buffer_t));
 
 	// process and return results
 	buf.clear();
-	for (unsigned i = 0; i < detail->blocks*detail->threadsperblock; ++i)
-		if (detail->buffer_host[i].len)
-			buf.push_back(detail->buffer_host[i]);
+	for (unsigned b = 0; b < detail->blocks; ++b)
+	{
+		uint32 readidx;
+		trail_type trail;
+		while ( (readidx=gtrailsout_buf[b].getreadidx(gtrailsout_ctl[b])) != 0xFFFFFFFF)
+		{
+			trail.start[0] = gtrailsout_buf[b].get<0>(readidx);
+			trail.start[1] = gtrailsout_buf[b].get<1>(readidx);
+			trail.start[2] = gtrailsout_buf[b].get<2>(readidx);
+			trail.end[0] = gtrailsout_buf[b].get<3>(readidx);
+			trail.end[1] = gtrailsout_buf[b].get<4>(readidx);
+			trail.end[2] = gtrailsout_buf[b].get<5>(readidx);
+			trail.len = gtrailsout_buf[b].get<6>(readidx);
+			buf.push_back(trail);
+		}
+	}
+//	for (unsigned i = 0; i < detail->blocks*detail->threadsperblock; ++i)
+//		if (detail->buffer_host[i].len)
+//			buf.push_back(detail->buffer_host[i]);
 }
 
 
@@ -570,6 +569,7 @@ void cuda_device::cuda_fill_trail_buffer(uint32 id, uint64 seed,
 
 void cuda_device::benchmark()
 {
+/*
 	timer sw;
 	for (int blocksize = 4; blocksize <= 256; ++blocksize)
 	for (int threadsize = 250; threadsize <= 257; ++threadsize)
@@ -585,6 +585,7 @@ void cuda_device::benchmark()
 		work *= 0x400 * blocksize * threadsize;
 		cout << blocksize << "x" << threadsize << ":\t" << work << " (" << ow << ")" << endl;
 	}
+*/
 }
 
 

@@ -14,6 +14,9 @@ AS_IF([test "x$CXXFLAGS" = "x"],
 	[usedefaultcxxflags=yes],
 	[usedefaultcxxflags=no])
 
+#CXXFLAGS="-mcmodel=large $CXXFLAGS"
+#LDFLAGS="-Wl,--no-relax $LDFLAGS"
+
 LT_INIT
 
 AC_LANG([C++])
@@ -61,6 +64,7 @@ AX_EXT
 CXXFLAGS="$CXXFLAGS $SIMD_FLAGS"
 
 AX_CUDA
+
 
 AC_CONFIG_FILES([
  Makefile
