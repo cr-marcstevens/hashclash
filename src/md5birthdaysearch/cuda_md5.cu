@@ -285,7 +285,7 @@ __global__ void cuda_md5_work(uint64 seed)
 		len = 0;
 	}
 
-	for (unsigned j = 0; j < 0x100; ++j)
+	for (unsigned j = 0; j < 0x400; ++j)
 	{
 		{
 			uint32* in = msg1;
@@ -440,15 +440,15 @@ void cuda_device::cuda_fill_trail_buffer(uint32 id, uint64 seed,
 	{
 		uint32 readidx;
 		trail_type trail;
-		while ( (readidx=gtrailsout_buf[b].getreadidx(gtrailsout_ctl[b])) != 0xFFFFFFFF)
+		while ((readidx=detail->trailsout_buf[b].getreadidx(detail->trailsout_ctl[b])) != 0xFFFFFFFF)
 		{
-			trail.start[0] = gtrailsout_buf[b].get<0>(readidx);
-			trail.start[1] = gtrailsout_buf[b].get<1>(readidx);
-			trail.start[2] = gtrailsout_buf[b].get<2>(readidx);
-			trail.end[0] = gtrailsout_buf[b].get<3>(readidx);
-			trail.end[1] = gtrailsout_buf[b].get<4>(readidx);
-			trail.end[2] = gtrailsout_buf[b].get<5>(readidx);
-			trail.len = gtrailsout_buf[b].get<6>(readidx);
+			trail.start[0] = detail->trailsout_buf[b].get<0>(readidx);
+			trail.start[1] = detail->trailsout_buf[b].get<1>(readidx);
+			trail.start[2] = detail->trailsout_buf[b].get<2>(readidx);
+			trail.end[0] = detail->trailsout_buf[b].get<3>(readidx);
+			trail.end[1] = detail->trailsout_buf[b].get<4>(readidx);
+			trail.end[2] = detail->trailsout_buf[b].get<5>(readidx);
+			trail.len = detail->trailsout_buf[b].get<6>(readidx);
 			buf.push_back(trail);
 		}
 	}
