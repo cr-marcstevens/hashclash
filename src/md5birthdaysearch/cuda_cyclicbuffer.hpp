@@ -73,11 +73,12 @@ class cyclic_buffer_control_mask_t
 	}
 	__host__ __device__ inline uint32_t used_count()
 	{
-		return (N + write_idx - read_idx) % N;
+		return write_idx - read_idx;
 	}
 	__host__ __device__ inline uint32_t free_count()
 	{
-		return (N + read_idx - write_idx) % N;
+		uint32_t c = (N + read_idx - write_idx);
+		return c==0 ? N : c;
 	}
 
 	// assumes entire warp calls this function with identical warp_to_write_mask
@@ -96,7 +97,7 @@ class cyclic_buffer_control_mask_t
 		}
 		// thread ZERO passes baseidx to entire warp
 		baseidx = __shfl_sync(WARP_FULL_MASK,baseidx,0);
-		return (baseidx + offset);
+		return (baseidx + offset) % N;
 	}
 
 	// assumes entire warp calls this function with identical inputs
@@ -108,9 +109,9 @@ class cyclic_buffer_control_mask_t
 		{
 			// obtain warp-wide unique race-free value of read_idx
 			uint32_t baseidx = __shfl_sync(WARP_FULL_MASK,read_idx,0);
-			uint32_t thrdidx = (baseidx+(threadIdx.x&31));
+			uint32_t thrdidx = (baseidx+(threadIdx.x&31)) % N;
 			// if not safe to read then return false
-			if (!__all_sync(WARP_FULL_MASK,0 != safereadvals[ thrdidx % N ] ))
+			if (!__all_sync(WARP_FULL_MASK,0 != safereadvals[ thrdidx ] ))
 			{
 				return 0xFFFFFFFF;
 			}
@@ -125,7 +126,7 @@ class cyclic_buffer_control_mask_t
 			// if read_idx was successfully increased return (true,baseidx+offset)
 			if (baseidx2 == baseidx)
 			{
-				safereadvals[thrdidx % N] = 0;
+				safereadvals[thrdidx] = 0;
 				return thrdidx;
 			}
 			// increase failed due to race, try again
@@ -145,9 +146,9 @@ class cyclic_buffer_control_mask_t
 		{
 			// obtain warp-wide unique race-free value of read_idx
 			uint32_t baseidx = __shfl_sync(WARP_FULL_MASK,read_idx,0);
-			uint32_t thrdidx = baseidx+offset;
+			uint32_t thrdidx = (baseidx+offset) % N;
 			// if not safe to read then return false
-			if (!__all_sync(WARP_FULL_MASK,0 != safereadvals[ thrdidx % N ] ))
+			if (!__all_sync(WARP_FULL_MASK,0 != safereadvals[ thrdidx ] ))
 			{
 				return 0xFFFFFFFF;
 			}
@@ -162,7 +163,7 @@ class cyclic_buffer_control_mask_t
 			// if read_idx was successfully increased return (true,baseidx+offset)
 			if (baseidx2 == baseidx)
 			{
-				safereadvals[thrdidx % N] = 0;
+				safereadvals[thrdidx] = 0;
 				return thrdidx;
 			}
 			// increase failed due to race, try again
@@ -180,8 +181,8 @@ class cyclic_buffer_control_mask_t
 		{
 			// obtain warp-wide unique race-free value of read_idx
 			uint32_t baseidx = __shfl_sync(WARP_FULL_MASK,read_idx, 0);
-			uint32_t thrdidx = (baseidx + (threadIdx.x & 31));
-			bool issafetoread = (0 != safereadvals[thrdidx % N]);
+			uint32_t thrdidx = (baseidx + (threadIdx.x & 31)) % N;
+			bool issafetoread = (0 != safereadvals[thrdidx]);
 			uint32_t safereadmask = __ballot_sync(WARP_FULL_MASK,issafetoread);
 			if (safereadmask == 0)
 				return 0xFFFFFFFF;
@@ -204,7 +205,7 @@ class cyclic_buffer_control_mask_t
 			// if read_idx was successfully increased return baseidx+offset or 0xEEEEEEEE
 			if (issafetoread)
 			{
-				safereadvals[thrdidx % N] = 0;
+				safereadvals[thrdidx] = 0;
 				return thrdidx;
 			}
 			else
@@ -216,7 +217,7 @@ class cyclic_buffer_control_mask_t
 	template<typename safereadval_t>
 	__host__ inline uint32_t host_read_idx(safereadval_t safereadvals[N])
 	{
-		uint32_t i = read_idx;
+		uint32_t i = read_idx % N;
 		if (safereadvals[i])
 		{
 			safereadvals[i] = 0;
@@ -230,7 +231,7 @@ class cyclic_buffer_control_mask_t
 	}
 	__host__ inline uint32_t host_write_idx()
 	{
-		uint32_t i = write_idx;
+		uint32_t i = write_idx % N;
 		++write_idx;
 		return i;
 	}
@@ -442,11 +443,13 @@ class cyclic_buffer_control_cas_t
 	}
 	__host__ __device__ inline uint32_t used_count()
 	{
-		return (N + write_idx - read_idx) % N;
+		return write_idx - read_idx;
 	}
 	__host__ __device__ inline uint32_t free_count()
 	{
-		return (N + read_idx - write_idx) % N;
+		uint32_t c = (N + read_idx - write_idx);
+		return c;
+//		return c==0 ? N : c;
 	}
 
 	// assumes entire warp calls this function with identical warp_to_write_mask
@@ -465,7 +468,7 @@ class cyclic_buffer_control_cas_t
 		}
 		// thread ZERO passes baseidx to entire warp
 		baseidx = __shfl_sync(WARP_FULL_MASK,baseidx,0);
-		return baseidx + offset;
+		return (baseidx + offset) % N;
 	}
 
 	// assumes entire warp calls this function with their per-thread idx to write to
@@ -509,7 +512,43 @@ class cyclic_buffer_control_cas_t
 			// if read_idx was successfully increased return (true,baseidx+offset)
 			if (baseidx2 == baseidx)
 			{
-				return thrdidx;
+				return thrdidx % N;
+			}
+			// increase failed due to race, try again
+		}
+	}
+
+	// assumes entire warp calls this function with identical inputs
+	// if read is safe return per-thread idx to read from, returns 0xFFFFFFFF otherwise
+	__device__ inline uint32_t warp_read_idx(uint32_t warp_to_read_mask)
+	{
+		// warp: determine count and offset
+		uint32_t count  = __popc(warp_to_read_mask);
+		// thread ZERO has offset 0
+		uint32_t offset = count - __popc(warp_to_read_mask >> (threadIdx.x&31));
+		while (true)
+		{
+			// obtain warp-wide unique race-free value of read_idx
+			uint32_t baseidx = __shfl_sync(WARP_FULL_MASK,read_idx,0);
+			uint32_t baseidxdist = __shfl_sync(WARP_FULL_MASK,written_idx,0);
+			// if not safe to read then return false
+			if ( baseidxdist-baseidx < count)
+			{
+				return 0xFFFFFFFF;
+			}
+			uint32_t thrdidx = (baseidx+offset);
+			// thread ZERO tries to increase read_idx with 32, baseidx2==baseidx in case of success, != otherwise
+			uint32_t baseidx2;
+			if ((threadIdx.x&31)==0)
+			{
+				baseidx2 = atomicCAS((uint32_t*)&read_idx, baseidx, baseidx+count);
+			}
+			// thread ZERO passes baseidx2 to entire warp
+			baseidx2 = __shfl_sync(WARP_FULL_MASK,baseidx2, 0);
+			// if read_idx was successfully increased return (true,baseidx+offset)
+			if (baseidx2 == baseidx)
+			{
+				return thrdidx % N;
 			}
 			// increase failed due to race, try again
 		}
@@ -542,7 +581,7 @@ class cyclic_buffer_control_cas_t
 				continue;
 			// if read_idx was successfully increased return (true,baseidx+offset)
 			if (thrdidx < baseidxdist)
-				return thrdidx;
+				return thrdidx % N;
 			return 0xEEEEEEEE;
 		}
 	}
@@ -551,7 +590,7 @@ class cyclic_buffer_control_cas_t
 	/**** HOST FUNCTIONS ASSUME EXCLUSIVE ACCESS FROM 1 HOST THREAD ****/
 	__host__ inline uint32_t host_write_idx()
 	{
-		uint32_t i = write_idx;
+		uint32_t i = write_idx % N;
 		++write_idx;
 		return i;
 	}
@@ -565,7 +604,7 @@ class cyclic_buffer_control_cas_t
 		{
 			return 0xFFFFFFFF;
 		}
-		uint32_t i = read_idx;
+		uint32_t i = read_idx % N;
 		++read_idx;
 		return i;
 	}
@@ -681,6 +720,27 @@ class cyclic_buffer_cas_t
 			memoryfence<fencetype>();
 		return ret;
 #else
+		return control.host_read_idx();
+#endif
+	}
+
+
+	// called by entire warp
+	// returns 0xFFFFFFFF if read is not possible
+	// returns per-thread read index if read is safe
+	__host__ __device__ inline uint32_t getreadidx(control_t& control, bool doread)
+	{
+#ifdef __CUDA_ARCH__
+		uint32_t mask = __ballot_sync(WARP_FULL_MASK,doread);
+		if (mask == 0) 
+			return 0xFFFFFFFF;
+		uint32_t ret = control.warp_read_idx(mask);
+		if (ret != 0xFFFFFFFF)
+			memoryfence<fencetype>();
+		return doread ? ret : 0xFFFFFFFF;
+#else
+		if (!doread)
+			return 0xFFFFFFFF;
 		return control.host_read_idx();
 #endif
 	}

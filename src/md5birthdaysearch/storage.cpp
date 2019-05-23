@@ -119,11 +119,10 @@ void storage_type::get_birthdaycollisions(vector< pair<trail_type,trail_type> >&
 	LOCK_STORAGE_MUTEX;
 	coll.clear();
 	if (collisions.size() >= multiple_of) {
-		swap(coll, collisions);
-		unsigned r = coll.size() % multiple_of;
-		for (unsigned k = unsigned(coll.size()-r); k < coll.size(); ++k)
-			collisions.push_back(coll[k]);
-		coll.resize(coll.size()-r);
+		size_t count = (collisions.size()/multiple_of)*multiple_of;
+		coll.resize(count);
+		std::copy(collisions.end() - count, collisions.end(), coll.begin());
+		collisions.resize(collisions.size()-count);
 	}
 }
 

@@ -33,11 +33,13 @@ if [ "$3" = "" ] ; then
 	echo -n "Detecting worklevel..."
 	worklevel=`$BIRTHDAYSEARCH --inputfile1 "$file1" --inputfile2 "$file2" --hybridbits 0 --pathtyperange 2 --maxblocks 9 --maxmemory 100 --threads $CPUS --cuda_enable |& grep "^Work" -m1 | head -n1 | cut -d'(' -f2 | cut -d'.' -f1`
 	echo ": $worklevel"
-	if [ $worklevel -ge 31 ]; then
-		$BIRTHDAYSEARCH --inputfile1 "$file1" --inputfile2 "$file2" --hybridbits 0 --pathtyperange 1 --maxblocks 8 --maxmemory 4000 --threads $CPUS --cuda_enable
-	else
-		$BIRTHDAYSEARCH --inputfile1 "$file1" --inputfile2 "$file2" --hybridbits 0 --pathtyperange 2 --maxblocks 9 --maxmemory 100 --threads $CPUS --cuda_enable
-	fi
+#	if [ $worklevel -ge 31 ]; then
+		#gdb --args 
+		$BIRTHDAYSEARCH --inputfile1 "$file1" --inputfile2 "$file2" --hybridbits 0 --pathtyperange 1 --maxblocks 7 --maxmemory 32000 --threads $CPUS --cuda_enable
+#	else
+#		$BIRTHDAYSEARCH --inputfile1 "$file1" --inputfile2 "$file2" --hybridbits 0 --pathtyperange 2 --maxblocks 9 --maxmemory 100 --threads $CPUS --cuda_enable
+#	fi
+	exit
 else
 	if [ "$4" != "" ]; then
 		cp $file1 file1.bin

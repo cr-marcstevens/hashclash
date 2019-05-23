@@ -233,6 +233,21 @@ void generate_trail(trail_type& trail)
 	trail.end[2] = z;
 }
 
+/*
+bool operator<(const trail_type& l, const trail_type& r)
+{
+	for (unsigned i=0; i<3; ++i)
+		if (l.start[i]!=r.start[i])
+			return l.start[i]<r.start[i];
+	for (unsigned i=0; i<3; ++i)
+		if (l.end[i]!=r.end[i])
+			return l.end[i]<r.end[i];
+	return false;
+}
+std::set<trail_type> check;
+size_t doubles = 0;
+*/
+
 // do not use LOCK_GLOBAL_MUTEX 
 // function possibly calls LOCK_GLOBAL_MUTEX
 void find_collision(const trail_type& trail1, const trail_type& trail2)
@@ -245,16 +260,33 @@ void find_collision(const trail_type& trail1, const trail_type& trail2)
 	uint32 c2 = trail2.start[2];
 	uint32 len1 = trail1.len;
 	uint32 len2 = trail2.len;
-	// sanity check
-	if (trail1.len > maximumpathlength || 0!=(trail1.end[0]&distinguishedpointmask)
-	    || trail2.len > maximumpathlength || 0!=(trail2.end[0]&distinguishedpointmask))
+/*
+	if (len1 == 1 && len2 ==1)
 	{
 		LOCK_GLOBAL_MUTEX;
-		cout << "X" << flush;
-		++collrobinhoods; // have to categorize this collision
-		return;
+		auto old = doubles;
+		if (!check.insert(trail1).second)
+			++doubles;
+		if (!check.insert(trail2).second)
+			++doubles;
+		if (doubles>0 && old != doubles)
+			cout << "D" << doubles << " " << flush;
 	}
-
+*/
+/*
+	// sanity check for non-preprocessed inputs
+	if (len1 != 1 || len2 != 1) 
+	{
+		if (trail1.len > maximumpathlength || 0!=(trail1.end[0]&distinguishedpointmask)
+		    || trail2.len > maximumpathlength || 0!=(trail2.end[0]&distinguishedpointmask))
+		{
+			LOCK_GLOBAL_MUTEX;
+			cout << "X" << flush;
+			++collrobinhoods; // have to categorize this collision
+			return;
+		}
+	}
+*/
 	while (len1 > len2)
 	{
 		birthday_step(a1, b1, c1);
@@ -553,6 +585,7 @@ struct birthday_thread {
 	{
 		vector<trail_type> work;
 		vector< pair<trail_type, trail_type> > collisions;
+		bool haveenoughcoll = false;
 		while (true)
 		{
 			uint64 seed;
@@ -562,6 +595,15 @@ struct birthday_thread {
 				xrng128();
 				xrng128();
 
+/*
+				if (_cuda_device_nr == 0 && (haveenoughcoll || main_storage.get_collqueuesize() >= 2048))
+				{
+					if (!haveenoughcoll)
+						std::cout << "Thread " << id << " (CUDA): started processing colliding trails on GPU" << std::endl;
+					main_storage.get_birthdaycollisions(collisions);
+					haveenoughcoll = true;
+				}
+*/
 				if (quit) return;
 			}
 #ifdef HAVE_CUDA
@@ -573,7 +615,13 @@ struct birthday_thread {
 
 			// insert the trails into the trail hash
 			if (collisions.size() > 0)
+			{
+//				std::cout << "Thread " << id << " (CUDA): " << collisions.size() << " colliding trails returned" << std::endl;
+				std::cout << "C" << collisions.size() << std::flush;
+				for (unsigned i = 0; i < collisions.size(); ++i)
+					find_collision(collisions[i].first, collisions[i].second);
 				collisions.clear();
+			}
 			else {
 				LOCK_GLOBAL_MUTEX;
 				for (unsigned i = 0; i < work.size(); ++i) 

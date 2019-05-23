@@ -36,7 +36,7 @@ typedef boost::uint64_t uint64;
 #define MAX_CUDA_THREADS (1<<20)
 #define MAX_CUDA_BLOCKS 256
 #define MAX_CUDA_THREADS_PER_BLOCK 2048
-#define REGISTERS_PER_CUDA_THREAD 32
+#define REGISTERS_PER_CUDA_THREAD 64
 
 #define TRAIL_NOCONSTRUCTOR
 #include "birthday_types.hpp"
@@ -56,10 +56,10 @@ typedef boost::uint64_t uint64;
  (instead of global) storage managed by the cuda realtime libraries 
 *****/
 // last template parameter is fence type: 0=none, 1=block, 2=gpu
-typedef cyclic_buffer_mask_t<MAX_CUDA_THREADS,uint32,7,cyclic_buffer_control_mask_t<MAX_CUDA_THREADS>,2> state_buffer_t;
+typedef cyclic_buffer_cas_t<MAX_CUDA_THREADS,uint32,7,cyclic_buffer_control_cas_t<MAX_CUDA_THREADS>,2> state_buffer_t;
 typedef cyclic_buffer_mask_t<MAX_CUDA_THREADS_PER_BLOCK,uint32,7,cyclic_buffer_control_mask_t<MAX_CUDA_THREADS_PER_BLOCK>,1> work_buffer_t;
 typedef work_buffer_t::control_t work_control_t;
-typedef cyclic_buffer_mask_t<MAX_CUDA_THREADS,uint32,15,cyclic_buffer_control_mask_t<MAX_CUDA_THREADS>,2> collisions_buffer_t;
+typedef cyclic_buffer_cas_t<MAX_CUDA_THREADS,uint32,15,cyclic_buffer_control_cas_t<MAX_CUDA_THREADS>,2> collisions_buffer_t;
 typedef collisions_buffer_t::control_t collisions_control_t;
 
 // static gpu buffer that always stays on GPU
@@ -76,7 +76,7 @@ __device__ collisions_buffer_t gcollisionsin_buf;
 __device__ collisions_buffer_t gcollisionsout_buf;
 __device__ collisions_control_t gcollisionsin_ctl;
 __device__ collisions_control_t gcollisionsout_ctl;
-__device__ halt_flag;
+__device__ volatile uint32 halt_flag;
 
 __constant__ uint32 msg1[16], msg2[16], ihv1[4], ihv2[4], ihv2mod[4];
 __constant__ uint32 precomp1[4], precomp2[4];
@@ -160,6 +160,13 @@ __global__ void cuda_md5_init()
 	int idx = blockIdx.x * blockDim.x + threadIdx.x;
 	gworking_states.get_ref<6>(idx) = 0; // len = 0
 	gcollision_states.get_ref<14>(idx) = 1; // bad = 1
+	if (threadIdx.x == 0)
+	{
+		gtrailsout_buf[blockIdx.x].reset(gtrailsout_ctl[blockIdx.x]);
+		gcollisionsin_buf.reset(gcollisionsin_ctl);
+		gcollisionsout_buf.reset(gcollisionsout_ctl);
+	}
+
 }
 
 bool cuda_device::init(uint32 device, const uint32 ihv1b[4], const uint32 ihv2b[4], const uint32 ihv2modb[4], const uint32 msg1b[16], const uint32 msg2b[16], uint32 hmask, uint32 dpmask, uint32 maxlen)
@@ -192,11 +199,11 @@ bool cuda_device::init(uint32 device, const uint32 ihv1b[4], const uint32 ihv2b[
 		minblockspermp += 1;
 
 	detail->threadsperblock = ((maxthreadspermp / minblockspermp) / 32) * 32;
-	detail->blocks = minblockspermp * deviceProp.multiProcessorCount * 2;
+	detail->blocks = minblockspermp * deviceProp.multiProcessorCount;
 	cout << "Using " << detail->blocks << " blocks with " << detail->threadsperblock << " threads each: total " << detail->blocks * detail->threadsperblock << " threads." << endl;
 
 	CUDA_SAFE_CALL( cudaSetDevice(device) );
-	CUDA_SAFE_CALL( cudaSetDeviceFlags( cudaDeviceBlockingSync | cudaDeviceScheduleYield ) );
+//	CUDA_SAFE_CALL( cudaSetDeviceFlags( cudaDeviceBlockingSync ) );
 
 //	work_buffer_t* trailsout_buf;//[MAX_CUDA_BLOCKS];
 //	work_control_t* trailsout_ctl;//[MAX_CUDA_BLOCKS];
@@ -204,12 +211,19 @@ bool cuda_device::init(uint32 device, const uint32 ihv1b[4], const uint32 ihv2b[
 //	collisions_control_t* collisionsin_ctl;//[MAX_CUDA_BLOCKS];
 //	collisions_buffer_t* collisionsout_buf;//[MAX_CUDA_BLOCKS];
 //	collisions_control_t* collisionsout_ctl;//[MAX_CUDA_BLOCKS];
+
 	CUDA_SAFE_CALL( cudaMallocHost( (void**)(&(detail->trailsout_buf)), detail->blocks * sizeof(work_buffer_t) ) );
 	CUDA_SAFE_CALL( cudaMallocHost( (void**)(&(detail->trailsout_ctl)), detail->blocks * sizeof(work_control_t) ) );
 	CUDA_SAFE_CALL( cudaMallocHost( (void**)(&(detail->collisionsin_buf)),  sizeof(collisions_buffer_t) ) );
 	CUDA_SAFE_CALL( cudaMallocHost( (void**)(&(detail->collisionsin_ctl)),  sizeof(collisions_control_t) ) );
 	CUDA_SAFE_CALL( cudaMallocHost( (void**)(&(detail->collisionsout_buf)), sizeof(collisions_buffer_t) ) );
 	CUDA_SAFE_CALL( cudaMallocHost( (void**)(&(detail->collisionsout_ctl)), sizeof(collisions_control_t) ) );
+
+	for (unsigned b = 0; b < detail->blocks; ++b)
+		detail->trailsout_buf[b].reset(detail->trailsout_ctl[b]);
+	detail->collisionsin_buf->reset(*(detail->collisionsin_ctl));
+	detail->collisionsout_buf->reset(*(detail->collisionsout_ctl));
+
 	detail->nrcollisions_on_gpu = 0;
 
 	uint32 pc1[4], pc2[4];
@@ -255,11 +269,6 @@ bool cuda_device::init(uint32 device, const uint32 ihv1b[4], const uint32 ihv2b[
 	CUDA_SAFE_CALL( cudaMemcpyToSymbol(distinguishedpointmask, &dpmask, sizeof(dpmask)) );
 	CUDA_SAFE_CALL( cudaMemcpyToSymbol(maximumpathlength, &maxlen, sizeof(maxlen)) );
 
-	for (unsigned b = 0; b < detail->blocks; ++b)
-		detail->trailsout_ctl[b].reset();
-//	gtrailsout_ctl.reset();
-//	gcollisionsin_ctl.reset();
-//	gcollisionsout_ctl.reset();
 
 	cuda_md5_init<<<detail->blocks, detail->threadsperblock>>>();
 
@@ -270,7 +279,7 @@ bool cuda_device::init(uint32 device, const uint32 ihv1b[4], const uint32 ihv2b[
 
 
 template<bool mod = false>
-__global__ void cuda_md5_work(uint64 seed)
+__device__ void cuda_md5_work2(uint64 seed)
 {
 	halt_flag = 0;
 	/********************* GENERATE TRAILS ***********************/
@@ -417,42 +426,51 @@ __global__ void cuda_md5_work(uint64 seed)
 	halt_flag = 1;
 }
 
+template<bool mod = false>
+__global__ void cuda_md5_work(uint64 seed)
+{
+	cuda_md5_work2<mod>(seed);
+}
 
 
 template<bool mod = false>
-__global__ void cuda_md5_collisions()
+__global__ void cuda_md5_collisions(uint64 seed)
 {
+	halt_flag = 0;
 	/********** PROCESS COLLIDING TRAILS INTO COLLISIONS ***************/
 	const int idx = blockIdx.x * blockDim.x + threadIdx.x;
 	uint32 bad = gcollision_states.get<14>(idx);
 	uint32 len = gcollision_states.get<6>(idx);
 	uint32 len2 = gcollision_states.get<7+6>(idx);
 	// if collision state is empty then go read a collision
-	bool doread = (len == 0 || len2 == 0 || bad != 0);
-	uint32 readidx = gcollisionsin_buf.getreadidx(gcollisionsin_ctl,doread);
-	if (doread && readidx < 0xEEEEEEEE)
+	if (len == 0 || len2 == 0)
+		bad = 1;
+	uint32 readidx = gcollisionsin_buf.getreadidx(gcollisionsin_ctl,bad);
+	if (bad && readidx < 0xEEEEEEEE)
 	{
 		len  = gcollisionsin_buf.get<6>(readidx);
 		len2 = gcollisionsin_buf.get<7+6>(readidx);
-		gcollision_states.get_ref<0>(idx) = gcollisionsin_buf.get<0>(readidx);
-		gcollision_states.get_ref<1>(idx) = gcollisionsin_buf.get<1>(readidx);
-		gcollision_states.get_ref<2>(idx) = gcollisionsin_buf.get<2>(readidx);
-		gcollision_states.get_ref<3>(idx) = gcollisionsin_buf.get<3>(readidx);
-		gcollision_states.get_ref<4>(idx) = gcollisionsin_buf.get<4>(readidx);
-		gcollision_states.get_ref<5>(idx) = gcollisionsin_buf.get<5>(readidx);
-		gcollision_states.get_ref<6>(idx) = gcollisionsin_buf.get<6>(readidx);
+		gcollision_states.get_ref<0>(idx) = gcollisionsin_buf.get<0>(readidx); //start[0]
+		gcollision_states.get_ref<1>(idx) = gcollisionsin_buf.get<1>(readidx); //start[1]
+		gcollision_states.get_ref<2>(idx) = gcollisionsin_buf.get<2>(readidx); //start[2]
+		gcollision_states.get_ref<3>(idx) = gcollisionsin_buf.get<0>(readidx); //start[0]
+		gcollision_states.get_ref<4>(idx) = gcollisionsin_buf.get<1>(readidx); //start[1]
+		gcollision_states.get_ref<5>(idx) = gcollisionsin_buf.get<2>(readidx); //start[2]
+		gcollision_states.get_ref<6>(idx) = gcollisionsin_buf.get<6>(readidx); //len
 		gcollision_states.get_ref<7+0>(idx) = gcollisionsin_buf.get<7+0>(readidx);
 		gcollision_states.get_ref<7+1>(idx) = gcollisionsin_buf.get<7+1>(readidx);
 		gcollision_states.get_ref<7+2>(idx) = gcollisionsin_buf.get<7+2>(readidx);
-		gcollision_states.get_ref<7+3>(idx) = gcollisionsin_buf.get<7+3>(readidx);
-		gcollision_states.get_ref<7+4>(idx) = gcollisionsin_buf.get<7+4>(readidx);
-		gcollision_states.get_ref<7+5>(idx) = gcollisionsin_buf.get<7+5>(readidx);
+		gcollision_states.get_ref<7+3>(idx) = gcollisionsin_buf.get<7+0>(readidx);
+		gcollision_states.get_ref<7+4>(idx) = gcollisionsin_buf.get<7+1>(readidx);
+		gcollision_states.get_ref<7+5>(idx) = gcollisionsin_buf.get<7+2>(readidx);
 		gcollision_states.get_ref<7+6>(idx) = gcollisionsin_buf.get<7+6>(readidx);
 		gcollision_states.get_ref<14>(idx) = bad = 0;
 	}
 	if (__all_sync(WARP_FULL_MASK,bad))
+	{
+//		cuda_md5_work2<mod>(seed);
 		return;
-
+	}
 	for (unsigned j = 0; j < (1<<12); ++j)
 	{
 		// always process the longest
@@ -460,7 +478,7 @@ __global__ void cuda_md5_collisions()
 		if (len >= len2)
 		{
 			// process trail1
-			// load end, write to start
+			// load start+1, write to start
 			x = gcollision_states.get<3>(idx);
 			y = gcollision_states.get<4>(idx);
 			z = gcollision_states.get<5>(idx);
@@ -471,7 +489,7 @@ __global__ void cuda_md5_collisions()
 		else
 		{
 			// process trail2
-			// load end, write to start
+			// load start+1, write to start
 			x = gcollision_states.get<7+3>(idx);
 			y = gcollision_states.get<7+4>(idx);
 			z = gcollision_states.get<7+5>(idx);
@@ -603,6 +621,12 @@ __global__ void cuda_md5_collisions()
 				));
 
 		{
+			if (done)
+			{
+				if (len > 0) len = 1;
+				if (len2 > 0) len2 = 1;
+				bad = 1;
+			}
 			// conditionally write result and load a new one
 			gcollisionsout_buf.write(gcollisionsout_ctl, done,
 				gcollision_states.get<0>(idx),
@@ -619,10 +643,9 @@ __global__ void cuda_md5_collisions()
 				gcollision_states.get<7+4>(idx),
 				gcollision_states.get<7+5>(idx),
 				len2);
-			if (done)
-				bad = 1;
 		}
 
+		if (4 <= __popc(__ballot_sync(WARP_FULL_MASK,bad)))
 		{
 			uint32 readidx = gcollisionsin_buf.getreadidx(gcollisionsin_ctl, bad);
 			if (bad && readidx < 0xEEEEEEEE)
@@ -632,23 +655,23 @@ __global__ void cuda_md5_collisions()
 				gcollision_states.get_ref<0>(idx) = gcollisionsin_buf.get<0>(readidx);
 				gcollision_states.get_ref<1>(idx) = gcollisionsin_buf.get<1>(readidx);
 				gcollision_states.get_ref<2>(idx) = gcollisionsin_buf.get<2>(readidx);
-				gcollision_states.get_ref<3>(idx) = gcollisionsin_buf.get<3>(readidx);
-				gcollision_states.get_ref<4>(idx) = gcollisionsin_buf.get<4>(readidx);
-				gcollision_states.get_ref<5>(idx) = gcollisionsin_buf.get<5>(readidx);
+				gcollision_states.get_ref<3>(idx) = gcollisionsin_buf.get<0>(readidx);
+				gcollision_states.get_ref<4>(idx) = gcollisionsin_buf.get<1>(readidx);
+				gcollision_states.get_ref<5>(idx) = gcollisionsin_buf.get<2>(readidx);
 				gcollision_states.get_ref<6>(idx) = gcollisionsin_buf.get<6>(readidx);
 				gcollision_states.get_ref<7+0>(idx) = gcollisionsin_buf.get<7+0>(readidx);
 				gcollision_states.get_ref<7+1>(idx) = gcollisionsin_buf.get<7+1>(readidx);
 				gcollision_states.get_ref<7+2>(idx) = gcollisionsin_buf.get<7+2>(readidx);
-				gcollision_states.get_ref<7+3>(idx) = gcollisionsin_buf.get<7+3>(readidx);
-				gcollision_states.get_ref<7+4>(idx) = gcollisionsin_buf.get<7+4>(readidx);
-				gcollision_states.get_ref<7+5>(idx) = gcollisionsin_buf.get<7+5>(readidx);
+				gcollision_states.get_ref<7+3>(idx) = gcollisionsin_buf.get<7+0>(readidx);
+				gcollision_states.get_ref<7+4>(idx) = gcollisionsin_buf.get<7+1>(readidx);
+				gcollision_states.get_ref<7+5>(idx) = gcollisionsin_buf.get<7+2>(readidx);
 				gcollision_states.get_ref<7+6>(idx) = gcollisionsin_buf.get<7+6>(readidx);
-				bad = 0;
+				gcollision_states.get_ref<14>(idx) = bad = 0;
 			}
 		}
 		if (__all_sync(WARP_FULL_MASK,bad))
 			break;
-		if (__shfl_sync(WARP_FULL_MASK,halt_flag)) // read global halt flag together and halt if set
+		if (__shfl_sync(WARP_FULL_MASK,halt_flag,0)) // read global halt flag together and halt if set
 			break;
 //		__syncthreads();
 	}
@@ -675,12 +698,15 @@ void cuda_device::cuda_fill_trail_buffer(uint32 id, uint64 seed,
 	uint32 collisionblocks = 0;
 	if (detail->collisions.size())
 	{
+		size_t oldsize = detail->collisions.size();
 		// store input collisions to GPU by writing to host buffer
 		// and sending it to GPU, we only move the control back and forth
 		uint32 count = detail->collisions.size();
 		// don't overwrite collision data still in the buffer
 		if (count >= detail->collisionsin_ctl->free_count())
 			count = detail->collisionsin_ctl->free_count();
+		if (count > 0)
+			count -= 1;
 		for (std::size_t i = 0; i < count; ++i)
 		{
 				detail->collisionsin_buf->write(*(detail->collisionsin_ctl), true,
@@ -695,7 +721,7 @@ void cuda_device::cuda_fill_trail_buffer(uint32 id, uint64 seed,
 		detail->nrcollisions_on_gpu += count;
 
 		// determine how many cuda blocks to start for collision
-		collisionblocks = detail->nrcollisions_on_gpu / detail->threadsperblock;
+		collisionblocks = (detail->nrcollisions_on_gpu / detail->threadsperblock)/2;
 		if (collisionblocks > detail->blocks)
 			collisionblocks = detail->blocks;
 		// only copy data to GPU when we're actually going to run GPU code
@@ -705,36 +731,48 @@ void cuda_device::cuda_fill_trail_buffer(uint32 id, uint64 seed,
 			cudaMemcpyToSymbol(gcollisionsin_ctl, detail->collisionsin_ctl, sizeof(collisions_control_t));
 			cudaMemcpyToSymbol(gcollisionsin_buf, detail->collisionsin_buf, sizeof(collisions_buffer_t));
 		}
+		if (0) std::cout << "C: " << oldsize << " " << detail->collisions.size() 
+			<< " " << detail->collisionsin_ctl->used_count()
+			<< " " << detail->collisionsin_ctl->free_count()
+			<< " " << collisionblocks << " " << detail->blocks
+			<< std::endl;
+		
 	}
 
 	// send control structures to GPU
 	cudaMemcpyToSymbol(gtrailsout_ctl, detail->trailsout_ctl, detail->blocks * sizeof(work_control_t));
+	// retrieve store buffers from GPU
+	cudaMemcpyToSymbol(gtrailsout_buf, detail->trailsout_buf, detail->blocks * sizeof(work_buffer_t));
 
 	// run GPU code
 	if (mod)
 	{
 		cuda_md5_work<true><<<detail->blocks - collisionblocks, detail->threadsperblock>>>(seed);
-		cuda_md5_collisions<true><<< collisionblocks, detail->threadsperblock>>>();
+		cuda_md5_collisions<true><<< collisionblocks, detail->threadsperblock>>>(seed);
 	}
 	else
 	{
 		cuda_md5_work<false><<<detail->blocks - collisionblocks, detail->threadsperblock>>>(seed);
-		cuda_md5_collisions<false><<< collisionblocks, detail->threadsperblock>>>();
+		cuda_md5_collisions<false><<< collisionblocks, detail->threadsperblock>>>(seed);
 	}
 
-	// retrieve control structures from GPU
-	cudaMemcpyFromSymbol(detail->trailsout_ctl, gtrailsout_ctl, detail->blocks * sizeof(work_control_t));
 	// retrieve store buffers from GPU
 	cudaMemcpyFromSymbol(detail->trailsout_buf, gtrailsout_buf, detail->blocks * sizeof(work_buffer_t));
+	// retrieve control structures from GPU
+	cudaMemcpyFromSymbol(detail->trailsout_ctl, gtrailsout_ctl, detail->blocks * sizeof(work_control_t));
 
+/*	std::cout << detail->trailsout_ctl[0].write_idx << " " <<
+		detail->trailsout_ctl[0].read_idx << std::endl;
+*/
 	// if we started a collision processing cuda job then process its output
 	if (collisionblocks > 0)
 	{
+		cudaMemcpyFromSymbol(detail->collisionsout_buf, gcollisionsout_buf, sizeof(collisions_buffer_t));
 		cudaMemcpyFromSymbol(detail->collisionsin_ctl, gcollisionsin_ctl, sizeof(collisions_control_t));
 		cudaMemcpyFromSymbol(detail->collisionsout_ctl, gcollisionsout_ctl, sizeof(collisions_control_t));
-		cudaMemcpyFromSymbol(detail->collisionsout_buf, gcollisionsout_buf, sizeof(collisions_buffer_t));
 		uint32 readidx;
-		while ((readidx=detail->collisionsout_buf->getreadidx(*(detail->collisionsout_ctl))) != 0xFFFFFFFF)
+		while ((readidx=detail->collisionsout_buf->getreadidx(*(detail->collisionsout_ctl)))
+			< 0xEEEEEEEE)
 		{
 			--detail->nrcollisions_on_gpu;
 			collisions.emplace_back();
@@ -755,6 +793,7 @@ void cuda_device::cuda_fill_trail_buffer(uint32 id, uint64 seed,
 			second.end[2]   = detail->collisionsout_buf->get<7+5>(readidx);
 			second.len      = detail->collisionsout_buf->get<7+6>(readidx);
 		}
+		cudaMemcpyToSymbol(gcollisionsout_ctl, detail->collisionsout_ctl, sizeof(collisions_control_t));
 	}
 
 	// process and return results
@@ -775,6 +814,7 @@ void cuda_device::cuda_fill_trail_buffer(uint32 id, uint64 seed,
 			buf.push_back(trail);
 		}
 	}
+//	std::cout << "B " << buf.size() << std::endl;
 }
 
 
