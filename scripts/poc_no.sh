@@ -17,7 +17,6 @@ fi
 if [ ! -z $prefixfile ]; then
 	if [ ! -f $prefixfile ]; then
 		echo "Not using prefixfile: doesn't exist"
-		pause
 		prefixfile=
 	fi
 fi
@@ -48,13 +47,21 @@ esac
 opts="-a $data -e 4 --fillfraction 1 -q 8"
 
 # automatically kill connect 10 seconds after first found differential path
+# but don't if abortfile exists
+# (on some machines the first NC block process can be so fast, 
+#  the first auto_kill_connect will actually inadvertently kill the second NC process)
 function auto_kill_connect
 {
+	abortfile="$1"
 	while [ ! -f data/bestpath.bin.gz ]; do
 		sleep 1
 	done
 	sleep 10
-	killall md5_diffpathconnect
+	if [ "$abortfile" != "" ]; then
+		if [ ! -f "$abortfile" ]; then
+			killall md5_diffpathconnect
+		fi
+	fi
 }
 
 rm -f *.log
@@ -99,9 +106,9 @@ fi
 
 #connect
 rm -f data/bestpath.bin.gz
-auto_kill_connect &
+auto_kill_connect data/connect1done &
 $CONNECT $diff -t $tconnect --inputfilelow data/paths$((tconnect-1))_0of1.bin.gz --inputfilehigh upper$N/paths$((tconnect+4))_0of1.bin.gz 2>&1 | tee connect.log
-touch data/bestpath.bin.gz
+touch data/bestpath.bin.gz data/connect1done
 sleep 2
 
 #find example collision
@@ -122,9 +129,9 @@ $FORWARD $diff $opts -f path_2nc.bin --normalt01 -t $startt --trange $(($tconnec
 
 #connect
 rm -f data/bestpath.bin.gz
-auto_kill_connect &
+auto_kill_connect data/connect2done &
 $CONNECT $diff -t $tconnect --inputfilelow data/paths$((tconnect-1))_0of1.bin.gz --inputfilehigh upper$N/paths$((tconnect+4))_0of1.bin.gz 2>&1 | tee connect2.log
-touch data/bestpath.bin.gz
+touch data/bestpath.bin.gz data/connect2done
 
 #find example collision
 $HELPER $diff --findcollision --inputfile1 data/bestpath.bin.gz 2>&1 | tee collfind2.log
