@@ -239,6 +239,7 @@ runtime=$((($(date +%s)-$starttime)/60))
 notify "Process completed in $runtime minutes ($backtracks backtracks)."
 
 # kill any pending thing
+rm md5diffpath*.cfg md5diffpath*.template
 pkill -P $$ &>/dev/null
 killall -r md5_ &>/dev/null
 exit

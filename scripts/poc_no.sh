@@ -70,6 +70,7 @@ while true; do
 	rm -rf data
 	mkdir -p data
 	mkdir -p logs
+	rm md5diffpath*.cfg md5diffpath*.template
 
 	# update configuration (data may be increased in the global loop)
 	optsupper="-a ${dataupper} -e 4 --fillfraction 1 -q 8"
