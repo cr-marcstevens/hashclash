@@ -8,7 +8,8 @@ export CONNECT=$BINDIR/md5_diffpathconnect
 
 N=1
 tconnect=12
-data=320000
+datalower=160000
+dataupper=640000
 prefixfile=prefix.bin
 
 if [ ! -z $1 ]; then
@@ -71,8 +72,9 @@ while true; do
 	mkdir -p logs
 
 	# update configuration (data may be increased in the global loop)
-	opts="-a $data -e 4 --fillfraction 1 -q 8"
-	updir=upper_${N}_${data}
+	optsupper="-a ${dataupper} -e 4 --fillfraction 1 -q 8"
+	optslower="-a ${datalower} -e 4 --fillfraction 1 -q 8"
+	updir=upper_${N}_${dataupper}
 
 ###################### FIRST NEAR-COLLISION BLOCK PAIR #####################
 
@@ -88,23 +90,23 @@ EOF
 		$HELPER $diff --pathfromtext --inputfile1 data/path_cv.txt --outputfile1 data/path_cv.bin
 		echo "Continuing in 3 seconds..."
 		sleep 3
-		$FORWARD $diff $opts -f data/path_cv.bin --normalt01 -t 0 --trange $(($tconnect-1)) 2>&1 | tee -a logs/lower.log
+		$FORWARD $diff $optslower -f data/path_cv.bin --normalt01 -t 0 --trange $(($tconnect-1)) 2>&1 | tee -a logs/lower.log
 	else
 		$HELPER $diff --startpartialpathfromfile --inputfile1 $prefixfile --outputfile1 data/$prefixfile.base --outputfile2 data/path_prefix.bin 2>&1 | tee logs/lower.log
 		echo "Continuing in 3 seconds..."
 		sleep 3
 		startt=`cat logs/lower.log | grep "^Q" | tail -n1 | cut -d: -f1 | cut -dQ -f2`
-		$FORWARD $diff $opts -f data/path_prefix.bin --normalt01 -t $startt --trange $(($tconnect-$startt-1)) 2>&1 | tee -a logs/lower.log
+		$FORWARD $diff $optslower -f data/path_prefix.bin --normalt01 -t $startt --trange $(($tconnect-$startt-1)) 2>&1 | tee -a logs/lower.log
 	fi
 
 	#create upper paths
 	mkdir -p  $updir
 	if [ ! -f $updir/done ]; then
 		$BACKWARD $diff -w $updir -n -t $tmid -b $(($tmid+1))
-		$FORWARD $diff $opts -w $updir -t $((tmid+1)) -b $tmid --trange $((61-$tmid)) 2>&1 | tee logs/upper.log
+		$FORWARD $diff $optsupper -w $updir -t $((tmid+1)) -b $tmid --trange $((61-$tmid)) 2>&1 | tee logs/upper.log
 		$FORWARD $diff -w $updir -a 16 -t 63 -b $tmid 2>&1 | tee -a logs/upper.log
 
-		$BACKWARD $diff $opts -w $updir -f $updir/paths63_0of1.bin.gz -t $((tmid-1)) --trange $(($tmid-$tconnect-5)) 2>&1 | tee -a logs/upper.log
+		$BACKWARD $diff $optsupper -w $updir -f $updir/paths63_0of1.bin.gz -t $((tmid-1)) --trange $(($tmid-$tconnect-5)) 2>&1 | tee -a logs/upper.log
 		touch $updir/done
 	fi
 
@@ -136,7 +138,7 @@ EOF
 
 	$HELPER $diff --startpartialpathfromfile --inputfile1 ./data/file1.bin --inputfile2 ./data/file2.bin --outputfile1 /dev/null --outputfile2 data/path_2nc.bin 2>&1 | tee logs/lower2.log
 	startt=`cat logs/lower2.log | grep "^Q" | tail -n1 | cut -d: -f1 | cut -dQ -f2`
-	$FORWARD $diff $opts -f data/path_2nc.bin --normalt01 -t $startt --trange $(($tconnect-$startt-1)) 2>&1 | tee -a logs/lower2.log
+	$FORWARD $diff $optslower -f data/path_2nc.bin --normalt01 -t $startt --trange $(($tconnect-$startt-1)) 2>&1 | tee -a logs/lower2.log
 
 	#connect
 	rm -f data/bestpath.bin.gz
