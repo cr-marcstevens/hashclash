@@ -86,7 +86,9 @@ bin_md5_birthdaysearch_SOURCES=\
 	src/md5birthdaysearch/main.cpp \
 	src/md5birthdaysearch/main.hpp \
 	src/md5birthdaysearch/storage.cpp \
-	src/md5birthdaysearch/storage.hpp
+	src/md5birthdaysearch/storage.hpp \
+	src/md5birthdaysearch/simd_avx256.cpp
+
 if HAVE_CUDA
 bin_md5_birthdaysearch_SOURCES+=\
 	src/md5birthdaysearch/cuda_md5.cu
@@ -131,7 +133,7 @@ bin_sha1_attackgenerator_SOURCES=\
 bin_sha1_nearcollisionattack_SOURCES=\
 	src/sha1attackgenerator/collfind.cpp
 
-NVCCFLAGS=-ccbin $(CXX) -O2 -v --maxrregcount=32 --ptxas-options=-v
+NVCCFLAGS=-ccbin $(CXX) -O2 -v --maxrregcount=64 --ptxas-options=-v -Xcompiler -mcmodel=medium
 
 .cu.o:
-	$(NVCC) $(NVCCFLAGS) $(CUDA_CFLAGS) $(addprefix -Xcompiler ,$(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS)) -o $@ -c $<
+	$(NVCC)  -arch=sm_75 $(NVCCFLAGS) $(CUDA_CFLAGS) $(addprefix -Xcompiler ,$(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS)) -o $@ -c $<

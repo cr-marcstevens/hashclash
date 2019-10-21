@@ -135,7 +135,7 @@ void precomputestate(uint32 ihv[4], uint32 block[16])
 }
 
 // LOCK_GLOBAL_MUTEX not needed
-inline void birthday_step(uint32& x, uint32& y, uint32& z)
+void birthday_step(uint32& x, uint32& y, uint32& z)
 {
 	uint32* block;
 	uint32* precomp;
@@ -233,6 +233,21 @@ void generate_trail(trail_type& trail)
 	trail.end[2] = z;
 }
 
+/*
+bool operator<(const trail_type& l, const trail_type& r)
+{
+	for (unsigned i=0; i<3; ++i)
+		if (l.start[i]!=r.start[i])
+			return l.start[i]<r.start[i];
+	for (unsigned i=0; i<3; ++i)
+		if (l.end[i]!=r.end[i])
+			return l.end[i]<r.end[i];
+	return false;
+}
+std::set<trail_type> check;
+size_t doubles = 0;
+*/
+
 // do not use LOCK_GLOBAL_MUTEX 
 // function possibly calls LOCK_GLOBAL_MUTEX
 void find_collision(const trail_type& trail1, const trail_type& trail2)
@@ -245,16 +260,33 @@ void find_collision(const trail_type& trail1, const trail_type& trail2)
 	uint32 c2 = trail2.start[2];
 	uint32 len1 = trail1.len;
 	uint32 len2 = trail2.len;
-	// sanity check
-	if (trail1.len > maximumpathlength || 0!=(trail1.end[0]&distinguishedpointmask)
-	    || trail2.len > maximumpathlength || 0!=(trail2.end[0]&distinguishedpointmask))
+/*
+	if (len1 == 1 && len2 ==1)
 	{
 		LOCK_GLOBAL_MUTEX;
-		cout << "X" << flush;
-		++collrobinhoods; // have to categorize this collision
-		return;
+		auto old = doubles;
+		if (!check.insert(trail1).second)
+			++doubles;
+		if (!check.insert(trail2).second)
+			++doubles;
+		if (doubles>0 && old != doubles)
+			cout << "D" << doubles << " " << flush;
 	}
-
+*/
+/*
+	// sanity check for non-preprocessed inputs
+	if (len1 != 1 || len2 != 1) 
+	{
+		if (trail1.len > maximumpathlength || 0!=(trail1.end[0]&distinguishedpointmask)
+		    || trail2.len > maximumpathlength || 0!=(trail2.end[0]&distinguishedpointmask))
+		{
+			LOCK_GLOBAL_MUTEX;
+			cout << "X" << flush;
+			++collrobinhoods; // have to categorize this collision
+			return;
+		}
+	}
+*/
 	while (len1 > len2)
 	{
 		birthday_step(a1, b1, c1);
@@ -542,15 +574,18 @@ struct birthday_thread {
 	uint32 id;
 	int _cuda_device_nr;
 	cuda_device _cuda_device;
+	simd_device_avx256 _simd_device;
+	bool _nosimd;
 	
 	birthday_thread(int cuda_device_nr = -1)
-		: _cuda_device_nr(cuda_device_nr), id(id_counter++)
+		: _cuda_device_nr(cuda_device_nr), id(id_counter++), _nosimd(false)
 	{}
 
 	void loop_cuda(bool single = false)
 	{
 		vector<trail_type> work;
 		vector< pair<trail_type, trail_type> > collisions;
+		bool haveenoughcoll = false;
 		while (true)
 		{
 			uint64 seed;
@@ -560,6 +595,15 @@ struct birthday_thread {
 				xrng128();
 				xrng128();
 
+/*
+				if (_cuda_device_nr == 0 && (haveenoughcoll || main_storage.get_collqueuesize() >= 2048))
+				{
+					if (!haveenoughcoll)
+						std::cout << "Thread " << id << " (CUDA): started processing colliding trails on GPU" << std::endl;
+					main_storage.get_birthdaycollisions(collisions);
+					haveenoughcoll = true;
+				}
+*/
 				if (quit) return;
 			}
 #ifdef HAVE_CUDA
@@ -571,11 +615,68 @@ struct birthday_thread {
 
 			// insert the trails into the trail hash
 			if (collisions.size() > 0)
+			{
+//				std::cout << "Thread " << id << " (CUDA): " << collisions.size() << " colliding trails returned" << std::endl;
+				std::cout << "C" << collisions.size() << std::flush;
+				for (unsigned i = 0; i < collisions.size(); ++i)
+					find_collision(collisions[i].first, collisions[i].second);
 				collisions.clear();
+			}
 			else {
 				LOCK_GLOBAL_MUTEX;
 				for (unsigned i = 0; i < work.size(); ++i) 
 					distribute_trail(work[i]); 
+			}
+			if (single)
+				break;
+		}
+	}
+
+	void loop_simd(bool single = false)
+	{
+		vector<trail_type> work;
+		vector< pair<trail_type, trail_type> > collisions;
+		bool verified = false;
+		while (true)
+		{
+			uint64 seed;
+			{
+				LOCK_GLOBAL_MUTEX;
+				seed = uint64(xrng128()) + (uint64(xrng128())<<32)+1111*procmodi;
+				xrng128();
+				xrng128();
+				main_storage.get_birthdaycollisions(collisions);
+
+				if (quit) return;
+			}
+
+			// insert the trails into the trail hash
+			if (collisions.size() > 0)
+			{
+				for (unsigned i = 0; i < collisions.size(); ++i)
+					find_collision(collisions[i].first, collisions[i].second);
+				collisions.clear();
+			}
+			else {
+				work.clear();
+				_simd_device.fill_trail_buffer(seed, work, bool(maxblocks == 1));
+				if (!verified && !work.empty())
+				{
+					trail_type tmp = work[0];
+					tmp.len = 0;
+					generate_trail(tmp);
+					if (tmp != work[0])
+					{
+						// found an error: disable SIMD and switch back to normal loop
+						_nosimd = true;
+						loop(single);
+						return;
+					}
+					verified = true;
+				}
+				LOCK_GLOBAL_MUTEX;
+				for (unsigned i = 0; i < work.size(); ++i) 
+					distribute_trail(work[i]);
 			}
 			if (single)
 				break;
@@ -590,6 +691,13 @@ struct birthday_thread {
 			return;
 		}
 #endif // CUDA
+
+		if (!_nosimd)
+		{
+			loop_simd(single);
+			return;
+		}
+
 		vector<trail_type> work(256);
 		vector< pair<trail_type,trail_type> > collisions;
 		while (true)
@@ -648,7 +756,13 @@ struct birthday_thread {
 //					_cuda_device.benchmark();
 				} else 
 #endif // CUDA
-				cout << "Thread " << id << " created." << endl;
+				if (_simd_device.init(ihv1, ihv2, ihv2mod, precomp1, precomp2, msg1, msg2, hybridmask, distinguishedpointmask, maximumpathlength))
+					cout << "Thread " << id << " created (AVX256)." << endl;
+				else
+				{
+					_nosimd = true;
+					cout << "Thread " << id << " created." << endl;
+				}
 			}
 			loop();
 			cout << "Thread " << id << " exited.          " << endl;
@@ -736,6 +850,9 @@ void birthday(birthday_parameters& parameters)
 		uint64 tmp = (maxtrails*sizeof(trail_type))>>19;
 		parameters.maxmemory = unsigned(tmp);
 	}
+	cout << "Maximum of near-collision blocks: " << parameters.maxblocks << endl;
+	cout << "Differential Path Type range: " << parameters.pathtyperange << endl;
+	cout << "Hybrid bits: " << parameters.hybridbits << endl;
 	cout << "Maximum amount of memory in MB for trails: " << parameters.maxmemory << " (local: " << parameters.maxmemory/parameters.modn << ")" << endl;
 	cout << "Estimated number of trails that will be stored:    " << maxtrails << " (local: " << maxtrails/parameters.modn << ")" << endl;
 	cout << "Estimated number of trails that will be generated: " << uint64(pow(double(2),estcomplexity-parameters.logpathlength)) << endl;

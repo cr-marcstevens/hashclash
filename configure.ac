@@ -14,6 +14,9 @@ AS_IF([test "x$CXXFLAGS" = "x"],
 	[usedefaultcxxflags=yes],
 	[usedefaultcxxflags=no])
 
+#CXXFLAGS="$CXXFLAGS"
+#LDFLAGS="$LDFLAGS"
+
 LT_INIT
 
 AC_LANG([C++])
@@ -35,6 +38,10 @@ AC_TYPE_UINT8_T
 AS_IF([test "x$cross_compiling" != "xyes" && test "x$usedefaultcxxflags" = "xyes" ],
 	[AX_CHECK_COMPILE_FLAG([-march=native], [CXXFLAGS="$CXXFLAGS -march=native"], [])])
 
+# hide the masses of deprecated warnings because of the old Boost version
+AX_CHECK_COMPILE_FLAG([-Wno-deprecated-declarations], [CXXFLAGS="$CXXFLAGS -Wno-deprecated-declarations"], [])
+AX_CHECK_COMPILE_FLAG([-Wno-deprecated], [CXXFLAGS="$CXXFLAGS -Wno-deprecated"], [])
+
 AX_PTHREAD()
 LIBS="$PTHREAD_LIBS $LIBS"
 CXXFLAGS="$CXXFLAGS $PTHREAD_CFLAGS"
@@ -53,7 +60,11 @@ CPPFLAGS="$BOOST_CPPFLAGS $CPPFLAGS"
 LDFLAGS="$BOOST_LDFLAGS $LDFLAGS"
 LIBS="$BOOST_FILESYSTEM_LIB $BOOST_IOSTREAMS_LIB $BOOST_PROGRAM_OPTIONS_LIB $BOOST_SERIALIZATION_LIB $BOOST_SYSTEM_LIB $BOOST_THREAD_LIB $LIBS"
 
+AX_EXT
+CXXFLAGS="$CXXFLAGS $SIMD_FLAGS"
+
 AX_CUDA
+
 
 AC_CONFIG_FILES([
  Makefile

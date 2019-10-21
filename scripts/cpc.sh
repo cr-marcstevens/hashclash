@@ -40,7 +40,15 @@ else
 fi
 
 if [ "$3" = "" ] ; then
-	$BIRTHDAYSEARCH --inputfile1 "$file1" --inputfile2 "$file2" --hybridbits 0 --pathtyperange 2 --maxblocks 9 --maxmemory 100 --threads $CPUS --cuda_enable
+	# check for CUDA / AVX256 threads
+	echo -n "Detecting worklevel..."
+	worklevel=`$BIRTHDAYSEARCH --inputfile1 "$file1" --inputfile2 "$file2" --hybridbits 0 --pathtyperange 2 --maxblocks 9 --maxmemory 100 --threads $CPUS --cuda_enable |& grep "^Work" -m1 | head -n1 | cut -d'(' -f2 | cut -d'.' -f1`
+	echo ": $worklevel"
+	if [ $worklevel -ge 31 ]; then
+		$BIRTHDAYSEARCH --inputfile1 "$file1" --inputfile2 "$file2" --hybridbits 0 --pathtyperange 2 --maxblocks 7 --maxmemory 4000 --threads $CPUS --cuda_enable
+	else
+		$BIRTHDAYSEARCH --inputfile1 "$file1" --inputfile2 "$file2" --hybridbits 0 --pathtyperange 2 --maxblocks 9 --maxmemory 100 --threads $CPUS --cuda_enable
+	fi
 	notify "Birthday search completed."
 else
 	if [ "$4" != "" ]; then
@@ -231,6 +239,7 @@ runtime=$((($(date +%s)-$starttime)/60))
 notify "Process completed in $runtime minutes ($backtracks backtracks)."
 
 # kill any pending thing
+rm md5diffpath*.cfg md5diffpath*.template
 pkill -P $$ &>/dev/null
 killall -r md5_ &>/dev/null
 exit
