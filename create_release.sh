@@ -21,7 +21,7 @@ cat Makefile \
 	> Makefile.tmp
 	
 AM_MAKEFLAGS="-f Makefile.tmp" make -f Makefile.tmp clean
-AM_MAKEFLAGS="-f Makefile.tmp" make -f Makefile.tmp -j4
+AM_MAKEFLAGS="-f Makefile.tmp" make -f Makefile.tmp -j4 || exit
 rm Makefile.tmp
 
 mkdir -p "$d/bin" "$d/scripts"
