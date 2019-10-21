@@ -13,12 +13,23 @@ if [ ! -z $MAXCPUS ]; then
 	fi
 fi
 export TTT=12
+export EXPECTED_BLOCKTIME=$((3600 * 8 / $CPUS))
+export AUTO_KILL_TIME=$((EXPECTED_BLOCKTIME * 2))
 
 rm -r data 2>/dev/null
 mkdir data || exit 1
 
 file1=$1
 file2=$2
+starttime=$(date +%s)
+
+function notify {
+	msg=$1
+	echo "[*] $msg"
+	if [[ -x "$(command -v notify-send)" ]]; then
+		notify-send "HashClash" "$msg"
+	fi
+}
 
 if [ -f "$file1" -a -f "$file2" ]; then
 	echo "Chosen-prefix file 1: $file1"
@@ -30,6 +41,7 @@ fi
 
 if [ "$3" = "" ] ; then
 	$BIRTHDAYSEARCH --inputfile1 "$file1" --inputfile2 "$file2" --hybridbits 0 --pathtyperange 2 --maxblocks 9 --maxmemory 100 --threads $CPUS --cuda_enable
+	notify "Birthday search completed."
 else
 	if [ "$4" != "" ]; then
 		cp $file1 file1.bin
@@ -69,7 +81,7 @@ function doconnect {
 		ps -p $CPID &>/dev/null || break
 		let contime=contime+$((5*$CPUS))
 		if [ $contime -gt 10000 ]; then
-			kill $CPID
+			kill $CPID &>/dev/null
 			break;
 		fi
 	done
@@ -83,7 +95,64 @@ function docollfind {
 		sleep 1
 	done
 	sleep 3
-	kill $CPID
+	kill $CPID &>/dev/null
+}
+
+function dostepk {
+	k=$1
+	pid=$$
+	echo "[*] Starting step $k"
+	sleep 1
+
+	rm -r workdir$k 2>/dev/null
+	mkdir workdir$k
+
+	echo $$ > workdir$k/pid
+	set -o pipefail
+	$HELPER -w workdir$k --startnearcollision file1_$k.bin file2_$k.bin --pathtyperange 2 |& tee workdir$k/start.log
+	if [[ $? -ne 0 ]]; then
+	    touch workdir$k/killed
+	    exit
+	fi
+
+	cp *.cfg workdir$k
+
+	doforward workdir$k |& tee workdir$k/forward.log
+	dobackward workdir$k |& tee workdir$k/backward.log
+
+	doconnect workdir$k |& tee workdir$k/connect.log
+
+	docollfind workdir$k workdir$k/connect
+
+	for f in workdir$k/coll1_*; do
+		if [ -e `echo $f | sed s/coll1/coll2/` ]; then
+			cat file1_$k.bin $f > file1_$(($k+1)).bin
+			cat file2_$k.bin `echo $f | sed s/coll1/coll2/` > file2_$(($k+1)).bin
+			cp file1_$(($k+1)).bin ${file1}.coll
+			cp file2_$(($k+1)).bin ${file2}.coll
+			break;
+		fi
+	done
+}
+
+function auto_kill
+{
+	workdir="$1"
+	pidfile="$workdir/pid"
+	killfile="$workdir/killed"
+	remaining=$2
+
+	while [[ $remaining -gt 0 ]]; do
+		echo "[*] Time before backtrack: $remaining s"
+		sleep 10
+		let remaining=$remaining-10
+	done
+
+	pid=$(<$pidfile)
+	echo "[*] Timeout reached. Killing process with pid $pid"
+	touch $killfile
+	pkill -KILL -P $pid &>/dev/null
+	kill -KILL $pid &>/dev/null
 }
 
 cp file1.bin file1_0.bin
@@ -114,35 +183,54 @@ cat <<EOF >md5diffpathconnect.cfg.template
 Qcondstart = 21
 EOF
 
+backtracks=0
 while true; do
+
+	echo "[*] Number of backtracks until now: $backtracks"
+	if [[ $backtracks -gt 20 ]]; then
+		notify "More than 20 backtracks is not normal. Please restart from scratch."
+		break
+	fi
+
+
+	# Check if the collision has been generated
 	if [ -f ${file1}.coll -a -f ${file2}.coll ]; then
 		if [ `cat ${file1}.coll | md5sum | cut -d' ' -f1` = `cat ${file2}.coll | md5sum | cut -d' ' -f1` ]; then
-			echo "Collision generated: ${file1}.coll ${file2}.coll"
+			notify "Collision generated: ${file1}.coll ${file2}.coll"
 			md5sum ${file1}.coll ${file2}.coll
-			exit
+			break
 		fi
 	fi
 
-	rm -r workdir$k 2>/dev/null
-	mkdir workdir$k
-	( $HELPER -w workdir$k --startnearcollision file1_$k.bin file2_$k.bin --pathtyperange 2 |& tee workdir$k/start.log ) || exit
-	cp *.cfg workdir$k
+	# Start the autokiller
+	auto_kill workdir$k $AUTO_KILL_TIME &
+	autokillerpid=$!
+	mainpid=$$
+	trap "kill $autokillerpid &>/dev/null; pkill -KILL -P $mainpid &>/dev/null; killall -r md5_ &>/dev/null; exit" TERM INT KILL
 
-	doforward workdir$k |& tee workdir$k/forward.log
-	dobackward workdir$k |& tee workdir$k/backward.log
+	# Start the computation
+	rm -f step$k.log
+	(dostepk $k 2>&1 &) | tee step$k.log
+	kill $autokillerpid &>/dev/null
+	killall -r md5_ &>/dev/null
 
-	doconnect workdir$k |& tee workdir$k/connect.log
-
-	docollfind workdir$k workdir$k/connect
-
-	for f in workdir$k/coll1_*; do
-		if [ -e `echo $f | sed s/coll1/coll2/` ]; then
-			cat file1_$k.bin $f > file1_$(($k+1)).bin
-			cat file2_$k.bin `echo $f | sed s/coll1/coll2/` > file2_$(($k+1)).bin
-			cp file1_$(($k+1)).bin ${file1}.coll
-			cp file2_$(($k+1)).bin ${file2}.coll
-			break;
-		fi
-	done
-	let k=k+1
+	# Check if the termination was completed or killed
+	if [[ -f workdir$k/killed ]]; then
+		failedk=$k
+		let k=$((k > 1 ? k-1 : 0))
+		notify "Step $failedk failed. Backtracking to step $k"
+		let backtracks=backtracks+1
+	else
+		notify "Step $k completed"
+		let k=k+1
+	fi
+	sleep 2
 done
+
+runtime=$((($(date +%s)-$starttime)/60))
+notify "Process completed in $runtime minutes ($backtracks backtracks)."
+
+# kill any pending thing
+pkill -P $$ &>/dev/null
+killall -r md5_ &>/dev/null
+exit
