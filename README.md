@@ -50,16 +50,6 @@
 
   `../scripts/cpc.sh <prefix.filename1> <prefix.filename2>`
 
-- Monitor progress of script
-
-  `ls -altr`
-  
-  If last change to any directory is several hours old then
-  * kill script & any running md5_diffpathhelper programs
-  * let K be the number of the last `workdir$(K)` directory
-  * restart script:
-    `../scripts/cpc.sh <prefix.filename1> <prefix.filename2> $((K-1))`
-
 ## Create you own identical-prefix collision
 
 - Create temporary working directory
