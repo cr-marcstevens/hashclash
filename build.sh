@@ -1,23 +1,27 @@
 #!/bin/bash
 
-# default values for boost library version and install location
-# (if not already defined in environment)
+# check for special configuration for macosx
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
 	SDK_PATH=$(xcrun --sdk macosx --show-sdk-path)
+	echo "[*] Detected macosx: SDK_PATH=${SDK_PATH}"
 fi
+if [ ! -z $(command -v glibtoolize) ]; then
+	LIBTOOLIZE=glibtoolize
+	echo "[*] Detected glibtoolize instead of libtoolize"
+else
+	LIBTOOLIZE=libtoolize
+fi
+
+# default values for boost library version and install location
+# (if not already defined in environment)
 
 : ${BOOST_VERSION:=1.57.0}
 : ${BOOST_INSTALL_PREFIX:=$(pwd)/boost-$BOOST_VERSION}
 : ${INCLUDE_DIRS:="/usr/include /usr/local/include $SDK_PATH/usr/include"}
 
 
-
-if glibtoolize --version >/dev/null 2>&1; then
-	LIBTOOLIZE='glibtoolize'
-else
-	LIBTOOLIZE='libtoolize'
-fi
+# helper functions
 
 function check_for_tool
 {
@@ -46,6 +50,7 @@ function check_for_library
 	echo "found"
 }
 
+
 ## Check prerequisites
 
 check_for_tool autoconf autoreconf
@@ -54,6 +59,7 @@ check_for_tool libtool $LIBTOOLIZE
 
 check_for_library zlib1g-dev zlib.h
 check_for_library libbz2-dev bzlib.h
+
 
 # Check for local boost libraries and compile it if necessary
 
