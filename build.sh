@@ -3,9 +3,21 @@
 # default values for boost library version and install location
 # (if not already defined in environment)
 
+if [[ "$OSTYPE" == "darwin"* ]]; then
+	SDK_PATH=$(xcrun --sdk macosx --show-sdk-path)
+fi
+
 : ${BOOST_VERSION:=1.57.0}
 : ${BOOST_INSTALL_PREFIX:=$(pwd)/boost-$BOOST_VERSION}
-: ${INCLUDE_DIRS:="/usr/include /usr/local/include"}
+: ${INCLUDE_DIRS:="/usr/include /usr/local/include $SDK_PATH/usr/include"}
+
+
+
+if glibtoolize --version >/dev/null 2>&1; then
+	LIBTOOLIZE='glibtoolize'
+else
+	LIBTOOLIZE='libtoolize'
+fi
 
 function check_for_tool
 {
@@ -38,7 +50,7 @@ function check_for_library
 
 check_for_tool autoconf autoreconf
 check_for_tool automake automake
-check_for_tool libtool libtoolize
+check_for_tool libtool $LIBTOOLIZE
 
 check_for_library zlib1g-dev zlib.h
 check_for_library libbz2-dev bzlib.h
