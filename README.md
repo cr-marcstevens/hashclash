@@ -14,6 +14,16 @@
 
   `sudo apt-get install zlib1g-dev libbz2-dev`
   
+- Optional: CUDA
+  
+## Building (automatic)
+
+- Run build.sh script
+
+   `./build.sh`
+
+## Building (manual)
+
 - local boost C++ libraries (preferable version 1.57.0)
 
   `./install_boost.sh` 
@@ -22,10 +32,6 @@
   
   `BOOST_VERSION=1.65.1 BOOST_INSTALL_PREFIX=$HOME/boost/boost-1.65.1 ./install_boost.sh`
   
- - Optional: CUDA
-  
-## Building
-
 - Build configure script
 
   `autoreconf --install`
