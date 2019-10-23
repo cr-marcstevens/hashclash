@@ -10,16 +10,13 @@ N=1
 tconnect=12
 datalower=160000
 dataupper=640000
-prefixfile=prefix.bin
+prefixfile=$1
 
-if [ ! -z $1 ]; then
-	prefixfile="$1"
+if [ -z $prefixfile ]; then
+	prefixfile=dummy.prefix.bin
 fi
-if [ ! -z $prefixfile ]; then
-	if [ ! -f $prefixfile ]; then
-		echo "Not using prefixfile: doesn't exist"
-		prefixfile=
-	fi
+if [ ! -f $prefixfile ]; then
+	touch $prefixfile
 fi
 
 # Note that positive message bit differences are given with bit indices 1,...,32
@@ -79,26 +76,11 @@ while true; do
 
 ###################### FIRST NEAR-COLLISION BLOCK PAIR #####################
 
-	#create lower paths
-	if [ -z $prefixfile ]; then
-		cat <<EOF > data/path_cv.txt
-Q-3:    |........ ........ ........ ........| ok p=1
-Q-2:    |........ ........ ........ ........| ok p=1
-Q-1:    |........ ........ ........ ........| ok p=1
-Q0:     |........ ........ ........ ........| ok p=1
-EOF
-
-		$HELPER $diff --pathfromtext --inputfile1 data/path_cv.txt --outputfile1 data/path_cv.bin
-		echo "Continuing in 3 seconds..."
-		sleep 3
-		$FORWARD $diff $optslower -f data/path_cv.bin --normalt01 -t 0 --trange $(($tconnect-1)) 2>&1 | tee -a logs/lower.log
-	else
-		$HELPER $diff --startpartialpathfromfile --inputfile1 $prefixfile --outputfile1 data/$prefixfile.base --outputfile2 data/path_prefix.bin 2>&1 | tee logs/lower.log
-		echo "Continuing in 3 seconds..."
-		sleep 3
-		startt=`cat logs/lower.log | grep "^Q" | tail -n1 | cut -d: -f1 | cut -dQ -f2`
-		$FORWARD $diff $optslower -f data/path_prefix.bin --normalt01 -t $startt --trange $(($tconnect-$startt-1)) 2>&1 | tee -a logs/lower.log
-	fi
+	$HELPER $diff --startpartialpathfromfile --inputfile1 $prefixfile --outputfile1 data/$prefixfile.base --outputfile2 data/path_prefix.bin 2>&1 | tee logs/lower.log
+	echo "Continuing in 3 seconds..."
+	sleep 3
+	startt=`cat logs/lower.log | grep "^Q" | tail -n1 | cut -d: -f1 | cut -dQ -f2`
+	$FORWARD $diff $optslower -f data/path_prefix.bin --normalt01 -t $startt --trange $(($tconnect-$startt-1)) 2>&1 | tee -a logs/lower.log
 
 	#create upper paths
 	mkdir -p  $updir
