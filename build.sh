@@ -45,4 +45,6 @@ echo "[*] Run: ./configure --with-boost=${BOOST_INSTALL_PREFIX}"
 echo "[*] Run: make clean"
 make clean
 echo "[*] Run: make -j 4"
-make -j 4
+make -j 4 || exit 1
+echo "[*] Finished!"
+
