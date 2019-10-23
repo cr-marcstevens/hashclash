@@ -36,7 +36,7 @@
 
 - Build programs
 
-  `make`
+  `make [-j 4]`
 
 ## Create your own chosen-prefix collisions
 
