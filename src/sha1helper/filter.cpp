@@ -197,7 +197,7 @@ int filterfeasible(parameters_type& parameters)
 		cout << "Reduced to " << vecpath.size() << " unique paths." << endl;
 	}
 	
-	std::size_t cnt = 0, cnt2 = 0;
+	uint64 cnt = 0, cnt2 = 0;
 	for (std::size_t i = 0; i < vecpath.size();)
 	{
 		if (hw(++cnt) == 1)
