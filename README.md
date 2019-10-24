@@ -24,6 +24,10 @@
 
 ## Building (manual)
 
+<details>
+<summary>See details</summary>
+<p>
+  
 - local boost C++ libraries (preferable version 1.57.0)
 
   `./install_boost.sh` 
@@ -43,6 +47,9 @@
 - Build programs
 
   `make [-j 4]`
+
+</p>
+</details>
 
 ## Create your own chosen-prefix collisions
 
