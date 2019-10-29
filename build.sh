@@ -69,7 +69,7 @@ if [ ! -f ${BOOST_INSTALL_PREFIX}/include/boost/version.hpp ]; then
 	echo "[*] Run: ./install_boost.sh"
 	export BOOST_VERSION
 	export BOOST_INSTALL_PREFIX
-	./install_boost.sh || exit 1
+	(./install_boost.sh &> boost.log) || (echo "Boost build failed! See boost.log"; exit 1)
 else
 	echo "found"
 fi
