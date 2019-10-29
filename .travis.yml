@@ -1,0 +1,21 @@
+sudo: required
+
+dist: trusty
+
+language: cpp
+
+jobs:
+  include:
+  - os: linux
+    compiler: gcc
+
+install:
+  - g++ --version
+  
+script:
+  - ./build.sh
+  - make check
+
+notifications:
+  on_success: change
+  on_failure: always
