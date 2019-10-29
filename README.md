@@ -1,6 +1,6 @@
 # Project HashClash - MD5 & SHA-1 cryptanalytic toolbox
 
-## Feedback & pingback appreciated
+## Feedback & pingback appreciated!
 
 ## Requirements
 
