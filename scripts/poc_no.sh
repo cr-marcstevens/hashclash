@@ -37,7 +37,8 @@ case $N in
 	diff="--diffm6 9 --diffm9 32 --diffm15 32"
 	tmid=32
 	tconnect=10
-	data=500000
+	datalower=500000
+	dataupper=500000
 	;;
 
 esac
@@ -69,7 +70,7 @@ while true; do
 	mkdir -p logs
 	rm md5diffpath*.cfg md5diffpath*.template
 
-	# update configuration (data may be increased in the global loop)
+	# update configuration (datalower may be increased in the global loop)
 	optsupper="-a ${dataupper} -e 4 --fillfraction 1 -q 8"
 	optslower="-a ${datalower} -e 4 --fillfraction 1 -q 8"
 	updir=upper_${N}_${dataupper}
@@ -104,7 +105,7 @@ while true; do
 	sleep 2
 
 	#check that the first connection happened
-	if [ ! -s data/bestpath.bin.gz ]; then let data=$((2*$data)); echo "First step failed. Restarting"; sleep 2; continue; fi
+	if [ ! -s data/bestpath.bin.gz ]; then let datalower=$((2*$datalower)); echo "First step failed. Restarting"; sleep 2; continue; fi
 
 
 	#find example collision
@@ -134,7 +135,7 @@ while true; do
 	sleep 2
 
 	#check that the second connection happened
-	if [ ! -s data/bestpath.bin.gz ]; then let data=$((2*$data)); echo "Second step failed. Restarting"; sleep 2; continue; fi
+	if [ ! -s data/bestpath.bin.gz ]; then let datalower=$((2*$datalower)); echo "Second step failed. Restarting"; sleep 2; continue; fi
 
 	#find example collision
 	$HELPER $diff --findcollision --inputfile1 data/bestpath.bin.gz 2>&1 | tee logs/collfind2.log
