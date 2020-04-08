@@ -135,5 +135,11 @@ bin_sha1_nearcollisionattack_SOURCES=\
 
 NVCCFLAGS=-ccbin $(CXX) -O2 -v --maxrregcount=64 --ptxas-options=-v -Xcompiler -mcmodel=medium
 
+CUDA_SMS=50 52 60 61 70 75
+GENCODE_FLAGS=
+$(foreach sm,$(CUDA_SMS),$(eval GENCODE_FLAGS += -gencode arch=compute_$(sm),code=sm_$(sm)))
+HIGHEST_SM:=$(lastword $(sort $(CUDA_SMS)))
+GENCODE_FLAGS+= -gencode arch=compute_$(HIGHEST_SM),code=compute_$(HIGHEST_SM)
+
 .cu.o:
-	$(NVCC)  -arch=sm_75 $(NVCCFLAGS) $(CUDA_CFLAGS) $(addprefix -Xcompiler ,$(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS)) -o $@ -c $<
+	$(NVCC) $(GENCODE_FLAGS) $(NVCCFLAGS) $(CUDA_CFLAGS) $(addprefix -Xcompiler ,$(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS)) -o $@ -c $<
