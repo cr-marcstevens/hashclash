@@ -74,6 +74,7 @@ else
 	echo "found"
 fi
 if [ ! -f ${BOOST_INSTALL_PREFIX}/include/boost/version.hpp ]; then
+	if [ -f boost.log ]; then cat boost.log; fi
 	echo "[*] *** error *** cannot find local boost (version ${BOOST_VERSION})"
 	exit 1
 fi
