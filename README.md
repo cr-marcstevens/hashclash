@@ -1,5 +1,7 @@
 # Project HashClash - MD5 & SHA-1 cryptanalytic toolbox
 
+[![C/C++ CI](https://github.com/cr-marcstevens/hashclash/actions/workflows/c-cpp.yml/badge.svg)](https://github.com/cr-marcstevens/hashclash/actions/workflows/c-cpp.yml)
+
 ## Feedback & pingback appreciated!
 
 ## Requirements
