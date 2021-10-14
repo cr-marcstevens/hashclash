@@ -50,10 +50,10 @@ jobs:
       run: ./build.sh
     - name: Log boost/bootstrap.log
       run: cat boost_*/bootstrap.log
-      if: matrix.os == 'macos-latest'
+      if: always()
     - name: Log boost.log
       run: cat boost.log
-      if: matrix.os == 'macos-latest'
+      if: always()
     - name: Log config.log
       run: cat config.log
-      if: matrix.os == 'macos-latest'
+      if: always()
