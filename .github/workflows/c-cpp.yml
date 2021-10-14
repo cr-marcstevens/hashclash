@@ -44,7 +44,7 @@ jobs:
         path: boost_*.tar.gz
         key: ${{ runner.os }}
     - name: Install dependencies (macos)
-      run: brew install automake
+      run: brew install automake zlib bzip2
       if: matrix.os == 'macos-latest'
     - name: Build
       run: ./build.sh
