@@ -8,11 +8,18 @@ on:
 
 jobs:
   build-os-boost:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v2
-    - name: Install boost
+    - name: Install dependencies (ubuntu)
       run: sudo apt-get install -y libboost-system-dev libboost-filesystem-dev libboost-iostreams-dev libboost-thread-dev libboost-serialization-dev libboost-program-options-dev
+      if: matrix.os == 'ubuntu-latest'
+    - name: Install dependencies (macos)
+      run: brew install boost automake
+      if: matrix.os == 'macos-latest'
     - name: Prepare
       run: autoreconf --install
     - name: Configure
@@ -33,5 +40,8 @@ jobs:
       with:
         path: boost_1_57_0.tar.gz
         key: ${{ runner.os }}
+    - name: Install dependencies (macos)
+      run: brew install automake
+      if: matrix.os == 'macos-latest'
     - name: Build
       run: ./build.sh
