@@ -8,9 +8,10 @@ on:
 
 jobs:
   build-os-boost:
+    if: ${{ false }}  # disable for now
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ ubuntu-latest, macos-latest ]
       fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
@@ -33,7 +34,7 @@ jobs:
   build-local-boost:
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ macos-latest ]
       fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
@@ -47,3 +48,12 @@ jobs:
       if: matrix.os == 'macos-latest'
     - name: Build
       run: ./build.sh
+    - name: Log boost/bootstrap.log
+      run: cat boost_*/bootstrap.log
+      if: matrix.os == 'macos-latest'
+    - name: Log boost.log
+      run: cat boost.log
+      if: matrix.os == 'macos-latest'
+    - name: Log config.log
+      run: cat config.log
+      if: matrix.os == 'macos-latest'
