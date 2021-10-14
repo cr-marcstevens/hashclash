@@ -40,7 +40,7 @@ jobs:
     - uses: actions/checkout@v2
     - uses: actions/cache@v2.1.6
       with:
-        path: boost_1_57_0.tar.gz
+        path: boost_*.tar.gz
         key: ${{ runner.os }}
     - name: Install dependencies (macos)
       run: brew install automake
