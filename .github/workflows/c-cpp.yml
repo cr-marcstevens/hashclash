@@ -7,10 +7,8 @@ on:
     branches: [ master ]
 
 jobs:
-  build:
-
+  build-os-boost:
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v2
     - name: Install boost
@@ -23,3 +21,16 @@ jobs:
       run: make
     - name: make check
       run: make check
+
+  build-local-boost:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/cache@v2.1.6
+      with:
+        path: boost_1_57_0.tar.gz
+    - name: Build
+      run: ./build.sh
