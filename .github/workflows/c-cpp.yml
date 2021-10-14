@@ -25,6 +25,9 @@ jobs:
       run: autoreconf --install
     - name: Configure
       run: ./configure
+    - name: Log config.log
+      run: cat config.log
+      if: always()
     - name: make
       run: make
     - name: make check
@@ -33,7 +36,7 @@ jobs:
   build-local-boost:
     strategy:
       matrix:
-        os: [ macos-latest ]
+        os: [ ubuntu-latest, macos-latest ]
       fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
@@ -41,7 +44,7 @@ jobs:
     - uses: actions/cache@v2.1.6
       with:
         path: boost_*.tar.gz
-        key: ${{ runner.os }}
+        key: ${{ matrix.os }}
     - name: Install dependencies (macos)
       run: brew install automake zlib bzip2
       if: matrix.os == 'macos-latest'
