@@ -88,8 +88,12 @@ cd $BOOST_DIR
 	linkflags="$BOOST_BUILD_CXXFLAGS" \
 	--prefix=$BOOST_INSTALL_PREFIX
 
+if [ ! -e ./b2 ]; then
+	cat bootstrap.log
+fi
+
 # compile boost
-./bjam -q \
+./b2 -q \
 	cxxflags="$BOOST_BUILD_CXXFLAGS" \
 	linkflags="$BOOST_BUILD_CXXFLAGS" \
 	--prefix=$BOOST_INSTALL_PREFIX \
