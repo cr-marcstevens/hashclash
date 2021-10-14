@@ -32,5 +32,6 @@ jobs:
     - uses: actions/cache@v2.1.6
       with:
         path: boost_1_57_0.tar.gz
+        key: ${{ runner.os }}
     - name: Build
       run: ./build.sh
