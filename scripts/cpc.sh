@@ -165,9 +165,9 @@ function auto_kill
 
 cp file1.bin file1_0.bin
 cp file2.bin file2_0.bin
-let k=$3
-if [ "$k" = "" ]; then
-	let k=0
+let k=0
+if [ "$3" != "" ]; then
+	let k=$3
 fi
 
 cat <<EOF >md5diffpathbackward.cfg.template
