@@ -71,7 +71,7 @@ if [ -d $BOOST_DIR ]; then
 fi
 
 # extract boost tar file
-tar -xzvf $BOOST_FILE \
+tar -xzf $BOOST_FILE \
 	|| ( echo "Cannot extract $BOOST_FILE" ; exit 1 )
 
 # go into boost directory
