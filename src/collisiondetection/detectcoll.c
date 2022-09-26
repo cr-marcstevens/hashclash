@@ -543,7 +543,7 @@ void sha1_process(SHA1_CTX* ctx, const uint32_t block[16]) {
 		for (j = 0; j < 80; ++j)
 			ctx->m2[j] = ctx->m1[j] ^ sha1_dv_xm_table[i][j];
 		if (sha1recompress_fast(t, ctx->ihv2, ctx->m2, ctx->states+((t+1)*5), ctx->ihv)) {
-			sprintf(dv_string, "%s(%b,%b)", sha1_dvs[i].dvtype==1?"I":"II", sha1_dvs[i].dvK, sha1_dvs[i].dvB);
+			sprintf(dv_string, "%s(%d,%d)", sha1_dvs[i].dvtype==1?"I":"II", sha1_dvs[i].dvK, sha1_dvs[i].dvB);
 			print_sha1_coll(ctx->total, ctx->ihv1, ctx->m1, ctx->ihv2, ctx->m2, dv_string);
 			ctx->found_collision = 1;
 			if (ctx->safe_hash) {
