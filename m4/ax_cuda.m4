@@ -90,13 +90,13 @@ then
 	AC_MSG_RESULT([nvcc version : $NVCC_VERSION])
 	
 	# test if architecture is 64 bits and NVCC version >= 2.3
-        libdir=lib
+        cuda_libdir=lib
         AX_COMPARE_VERSION([$NVCC_VERSION],[gt],[2.2],[
 	    if test "x$host_cpu" = xx86_64 ; then
-	        libdir=lib64
+	        cuda_libdir=lib64
 	    fi
 	    if test "x$host_cpu" = xpowerpc64le ; then
-	        libdir=lib64
+	        cuda_libdir=lib64
 	    fi
 	])
 
@@ -104,13 +104,13 @@ then
 	if test -n "$cuda_home_path"
 	then
 	    CUDA_CFLAGS="-I$cuda_home_path/include"
-	    CUDA_LIBS="-L$cuda_home_path/$libdir -lcudart"
+	    CUDA_LIBS="-L$cuda_home_path/$cuda_libdir -lcudart"
 	else
 	    CUDA_CFLAGS="-I/usr/local/cuda/include"
-	    CUDA_LIBS="-L/usr/local/cuda/$libdir -lcudart"
+	    CUDA_LIBS="-L/usr/local/cuda/$cuda_libdir -lcudart"
 	fi
 
-	CUDA_LIBS+=" -L$cuda_home_path/$libdir/stubs -lcuda"
+	CUDA_LIBS+=" -L$cuda_home_path/$cuda_libdir/stubs -lcuda"
 
 	saved_CPPFLAGS=$CPPFLAGS
 	saved_LIBS=$LIBS
