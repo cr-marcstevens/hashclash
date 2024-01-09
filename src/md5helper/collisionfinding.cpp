@@ -208,7 +208,7 @@ void collisionfinding_thread::do_step26()
 	md5compress(ihv, block);
 	md5compress(ihv2, block2);
 	{
-	boost::lock_guard<boost::mutex> lock(mut);
+	//boost::lock_guard<boost::mutex> lock(mut);
 	if (ihv2[0]-ihv[0] == dQ[0] + dQ[offset+61]) {
 		++t61count;
 		if (hw(t61count)==1)
@@ -291,11 +291,11 @@ void collisionfinding_thread::do_step25()
 			continue;
 		TESTCOUNT(18);
 
-		mut.lock();
+		//mut.lock();
 		++tendcount;
-		if (hw(uint32(tendcount))==1)
-			cout << tendcount << " " << t61count << endl;
-		mut.unlock();
+		//if (hw(uint32(tendcount))==1)
+		//	cout << tendcount << " " << t61count << endl;
+		//mut.unlock();
 
 		uint32 R3 = Q[offset+4]-Q[offset+3];
 		m[3] = rotate_right(R3,md5_rc[3]) - md5_ff(Q[offset+3],Q[offset+2],Q[offset+1])
