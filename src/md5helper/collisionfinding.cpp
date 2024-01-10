@@ -209,15 +209,15 @@ void collisionfinding_thread::do_step26()
 	md5compress(ihv2, block2);
 	{
 	//boost::lock_guard<boost::mutex> lock(mut);
-	if (ihv2[0]-ihv[0] == dQ[0] + dQ[offset+61]) {
+	if (ihv2[0]-ihv[0] == 0) {
 		++t61count;
 		if (hw(t61count)==1)
 			cout << tendcount << " " << t61count << endl;
 	} else return;
 
-	if (ihv2[1]-ihv[1] != dQ[3] + dQ[offset+64]) return;
-	if (ihv2[2]-ihv[2] != dQ[2] + dQ[offset+63]) return;
-	if (ihv2[3]-ihv[3] != dQ[1] + dQ[offset+62]) return;
+	if (ihv2[1]-ihv[1] != 0) return;
+	if (ihv2[2]-ihv[2] != 0) return;
+	if (ihv2[3]-ihv[3] != 0) return;
 
 	uint32 x = xrng128();
 	string filename1 = workdir + "/coll1_" + boost::lexical_cast<string>(x);

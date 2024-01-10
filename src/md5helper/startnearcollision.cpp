@@ -431,6 +431,7 @@ int startnearcollision(parameters_type& parameters)
 	unsigned bestcond = 1<<31;
 	for (unsigned i = 0; i < 1<<10; ++i) {
 		if (sbcpc) {
+			continue;
 			uint32 dihvmin[4] = { -dihv[0], -dihv[1], -dihv[2], -dihv[3] };
 			constructupperpath_sbcpc(upperpath, m_diff, dihvmin);
 		} else {
