@@ -115,6 +115,19 @@ void dostep(path_container& container)
 	const unsigned modi = container.modi;
 
 	vector< differentialpath > pathsinhigh, pathsout;
+	boost::thread_group mythreads;
+	vector< differentialpath> pathsinlow;
+	mythreads.create_thread([&pathsinlow, &container]() {
+		try {
+			cout << "Loading " << container.inputfilelow << "..." << flush;
+			load_gz(pathsinlow, binary_archive, container.inputfilelow);
+			sort(pathsinlow.begin(), pathsinlow.end(), diffpathlower_less());
+			cout << "done: " << pathsinlow.size() << "." << endl;
+		} catch(...) {
+			cout << "failed." << endl;
+		}
+		});
+
 	if (modn > 1) {
 		try {
 			vector< differentialpath > pathstmp2;
@@ -138,17 +151,9 @@ void dostep(path_container& container)
 			cout << "failed." << endl;
 		}
 	}
+	mythreads.join_all();
 	if (pathsinhigh.size() == 0)
 		throw std::runtime_error("No upper differential paths loaded!");
-	vector< differentialpath> pathsinlow;
-	try {
-		cout << "Loading " << container.inputfilelow << "..." << flush;
-		load_gz(pathsinlow, binary_archive, container.inputfilelow);
-		sort(pathsinlow.begin(), pathsinlow.end(), diffpathlower_less());
-		cout << "done: " << pathsinlow.size() << "." << endl;
-	} catch(...) {
-		cout << "failed." << endl;
-	}
 	if (pathsinlow.size() == 0)
 		throw std::runtime_error("No lower differential paths loaded!");	
 
