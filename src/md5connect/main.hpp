@@ -241,12 +241,13 @@ public:
 		if (!check_path_collfind(pathback, m_diff)) 
 			return;
 
-		if (tuncompl == bestmaxcomp && tunnel == bestmaxtunnel && cond == bestpathcond) {
+		if (tuncompl == bestmaxcomp && tunnel == bestmaxtunnel && cond <= bestpathcond+4) {
 			mut.lock();
 			++verified;
 			bestpaths.push_back(pathback);
 			if (hw(uint32(bestpaths.size()))==1) {
 				save_gz(bestpaths, workdir + "/bestpaths", binary_archive);
+				save_gz(bestpaths, workdir + "/bestpaths_t" + boost::lexical_cast<string>(tunnel) + "_c" + boost::lexical_cast<string>(cond), binary_archive);
 				cout << "Best paths: " << bestpaths.size() << endl;
 			}
 			mut.unlock();
@@ -268,6 +269,7 @@ public:
 		double p = test_path(pathback, m_diff);
 		cout << "Best path: totcompl=" << bestmaxcomp << " tottunnel=" << bestmaxtunnel << ", totcond=" << bestpathcond << ", p=" << p << endl;
 		save_gz(pathback, workdir + "/bestpath_t" + boost::lexical_cast<string>(tunnel) + "_c" + boost::lexical_cast<string>(cond), binary_archive);
+		save_gz(bestpaths, workdir + "/bestpaths_t" + boost::lexical_cast<string>(tunnel) + "_c" + boost::lexical_cast<string>(cond), binary_archive);
 		save_gz(pathback, workdir + "/bestpath_new", binary_archive);
 		save_gz(bestpaths, workdir + "/bestpaths_new", binary_archive);
 		try { boost::filesystem::rename(workdir + "/bestpath.bin.gz", workdir + "/bestpath_old.bin.gz"); } catch (...) {}
