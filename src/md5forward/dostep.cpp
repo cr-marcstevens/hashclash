@@ -357,11 +357,37 @@ void dostep(path_container_autobalance& container, bool savetocache)
 		show_path(pathsout[0], container.m_diff);
 	else
 		throw std::runtime_error("No valid differential paths found!");
-	std::string filenameout = pathsstring("paths" + boost::lexical_cast<std::string>(t), modi, modn);
 	cout << "Saving " << pathsout.size() << " paths..." << flush;
 	if (savetocache)
+	{
 		pathscache.swap(pathsout);
-	else
+		cout << "cached." << endl;
+		return;
+	}
+	unsigned splitsave = container.splitsave;
+	if (splitsave <= 1)
+	{
+		std::string filenameout = pathsstring("paths" + boost::lexical_cast<std::string>(t), modi, modn);
 		save_gz(pathsout, filenameout, binary_archive);
+		cout << "done." << endl;
+		return;
+	}
+
+	random_permutation(pathsout);
+	boost::thread_group mythreads;
+	for (unsigned i = 0; i < splitsave; ++i)
+	{
+		mythreads.create_thread([t,i,splitsave,&pathsout]()
+			{
+				std::string filenameout = pathsstring("paths" + boost::lexical_cast<std::string>(t), i, splitsave);
+				size_t start = double(i)*double(pathsout.size())/double(splitsave);
+				size_t end = double(i+1)*double(pathsout.size())/double(splitsave);
+				vector<differentialpath> pathsouti(pathsout.begin()+start, pathsout.begin()+end);
+				save_gz(pathsouti, filenameout, binary_archive);
+				cout << " " << i;
+			}
+			);
+	}
+	mythreads.join_all();
 	cout << "done." << endl;
 }

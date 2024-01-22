@@ -83,6 +83,10 @@ int main(int argc, char** argv)
 				, po::bool_switch(&container.showinputpaths)
 				, "Show all input paths.\n")
 
+			("splitsave"
+				, po::value<unsigned>(&container.splitsave)->default_value(1)
+				, "Split save output paths into N files")
+
 			("tstep,t"
 				, po::value<unsigned>(&container.t)
 				, "Do step t (=0,...,15).")
@@ -219,6 +223,7 @@ int main(int argc, char** argv)
 		if (container.modn != 1) {
 			cout << "Using set " << container.modi << " of " << container.modn << endl;
 			container.trange = 0;
+			container.splitsave = 0;
 		}
 
 		if (false == container.normalt01 && container.t <= 1) {
