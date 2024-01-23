@@ -28,20 +28,22 @@ struct birthday_parameters {
 	birthday_parameters()
 		: inputfile1(), inputfile2()
 		, outputfile1(), outputfile2()
-		, modn(1), modi(0)
-		, logpathlength(-1), maxblocks(16)
+		, modn(1), modi(0), generatormode(false)
+		, logpathlength(-1), maxblocks(16), saveloadwait(60)
 		, threads(1), sputhreads(0)
 		, memhardlimit(false), distribution(false), cuda_enabled(false)
 	{}
 	unsigned threads;
 	unsigned sputhreads;
 	unsigned modn, modi;
+	bool generatormode;
 	std::string inputfile1, inputfile2;
 	std::string outputfile1, outputfile2;
 	int logpathlength;
 	unsigned maxblocks;
 	unsigned hybridbits, pathtyperange;
 	unsigned maxmemory; // in MB, this is NOT a hard limit
+	unsigned saveloadwait;
 	bool memhardlimit;
 	bool distribution;
 	bool cuda_enabled;

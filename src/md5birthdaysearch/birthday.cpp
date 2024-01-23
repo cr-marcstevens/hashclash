@@ -56,6 +56,7 @@ unsigned maxblocks = 64;
 bool memhardlimit = false;
 unsigned parameterspathtyperange = 0;
 unsigned procmodn = 0, procmodi = 0;
+bool generatormode = false;
 vector< pair<uint32,uint32> > singleblockdata;
 /**/
 
@@ -449,7 +450,7 @@ void distribute_trail(const trail_type& newtrail)
 	totwork += newtrail.len;
 	totworkallproc += newtrail.len;
 	uint32 procindex = newtrail.end[1] % procmodn;
-	if (procindex == procmodi) {
+	if (procindex == procmodi && !generatormode) {
 		main_storage.insert_trail(newtrail);
 	} else
 		trail_distribution[procindex].push_back(newtrail);
@@ -528,7 +529,7 @@ void load_save_trails(bool dosave = true)
 			traildata.check = 0x56139078;
 			savepart = (savepart+1) % 64;
 			for (unsigned i = 0; i < procmodn; ++i) {
-				if ( (i%64) != savepart) continue;
+//				if ( (i%64) != savepart) continue;
 				traildata.trails.clear();
 				{
 					LOCK_GLOBAL_MUTEX;
@@ -538,9 +539,9 @@ void load_save_trails(bool dosave = true)
 					try {
 						++fileserialothers[i];
 						string basefilename = workdir + "/" + boost::lexical_cast<string>(i) 
-							+ "/birthdaydata_" + boost::lexical_cast<string>(procmodi) + "_";
+							+ "/birthdaydata_" + boost::lexical_cast<string>(procmodi) + "_" + boost::lexical_cast<string>(xrng128()) + "_";
 						string tmpfilename = "/tmp/birthdaydata_" + boost::lexical_cast<string>(i) 
-							+ "_" + boost::lexical_cast<string>(procmodi) + "_";
+							+ "_" + boost::lexical_cast<string>(procmodi) + "_" + boost::lexical_cast<string>(xrng128()) + "_";
 						save(traildata, binary_archive, tmpfilename + boost::lexical_cast<string>(fileserialothers[i]) + ".tmp");
 						boost::filesystem::copy_file( tmpfilename + boost::lexical_cast<string>(fileserialothers[i]) + ".tmp",
 							basefilename + boost::lexical_cast<string>(fileserialothers[i]) + ".bin");
@@ -795,6 +796,8 @@ void birthday(birthday_parameters& parameters)
 {
 	procmodn = parameters.modn;
 	procmodi = parameters.modi;
+	generatormode = parameters.generatormode;
+
 	trail_distribution.resize(procmodn);
 
 	// add the modi parameter to the seed
@@ -938,8 +941,8 @@ void birthday(birthday_parameters& parameters)
 	while (!quit)
 	{
 		boost::this_thread::sleep(boost::posix_time::seconds(10));
-		if (procmodn > 1) {
-			if (save_timer.time() > 60) {
+		if (procmodn > 1 || generatormode) {
+			if (save_timer.time() > parameters.saveloadwait) {
 				load_save_trails();
 				save_timer.start();
 			} //else load_save_trails(false);
