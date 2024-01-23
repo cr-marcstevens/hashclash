@@ -58,7 +58,7 @@ public:
 		, nafestweight(0), halfnafweight(false), minQ456tunnel(0), minQ91011tunnel(0), minQ314tunnel(0)
 		, pathsout(0), size(0), count(0), count_balanced(0)
 		, condcount(0), verified(0), verifiedbad(0), minweight(0), fillfraction(0), threads(1)
-		, uct(-4), ucb(-1), ucc('.')
+		, uct(-4), ucb(-1), ucc('.'), main_container(nullptr)
 	{
 		if (uct < -3 || uct > 64 || ucb < 0 || ucb > 32
 			|| (ucc != '0' && ucc != '1' && ucc != '^' && ucc != '!' && ucc != 'm' && ucc != '#')
@@ -76,6 +76,8 @@ public:
 
 	~path_container_autobalance() 
 	{
+		if (main_container != nullptr)
+			return;
 		cerr << "Autobalance parameters: maxcond=" << maxcond << endl;
 		if (!noverify)
 			cerr << "Verified: " << verifiedbad << " bad out of " << verified << endl;
@@ -89,13 +91,36 @@ public:
 		condcount.resize(maxcond+1);
 	}
 
+	void estimate_flush_main()
+	{
+		if (main_container != nullptr)
+		{
+			boost::lock_guard<boost::mutex> lock(mut);
+			for (unsigned i = 0; i < condcount.size(); ++i)
+				if (condcount[i])
+				{
+					main_container->estimate(i, condcount[i]);
+					condcount[i] = 0;
+				}
+			size = 0;
+			maxcond = main_container->maxcond;
+		}
+	}
+	
 	void estimate(unsigned cond, unsigned amount)
 	{
 		if (cond > maxcond) return;
 		if (ubound == 0) return;
-		boost::lock_guard<boost::mutex> lock(mut);
 		condcount[cond] += amount;
 		size += amount;
+		// if we're a helper container then frequently sync with main container
+		if (main_container != nullptr)
+		{
+			if (size >= 1024)
+				estimate_flush_main();
+			return;
+		}
+		// if we're the main container then autobalance
 		unsigned uboundf = unsigned(double(ubound) * estimatefactor);
 		if (size > uboundf) {
 			unsigned newsize = 0;
@@ -107,6 +132,8 @@ public:
 			}
 			for (unsigned j = k+1; j <= maxcond && j < condcount.size(); ++j)
 				condcount[j] = 0;
+			// there is a worst case when (sum_i<k condcount[i])=0 and condcount[k] > ubound
+			// in that case we break ubound and include k
 			if (newsize != 0) {
 				size = newsize;
 				maxcond = k-1;
@@ -195,27 +222,54 @@ public:
 		{
 			if (!test_path_fast(path, m_diff))
 			{
-				mut.lock();
 				++verifiedbad;
 				++verified;
-				mut.unlock();
 				return;
 			}
 		}
-		mut.lock();
 		if (!noverify) ++verified;
 		if (ubound == 0) {
 			pathsout[cond].push_back(path);
-			mut.unlock();
+			++size; ++count;
+			if (main_container != nullptr && size > 1024)
+				push_back_flush_main();
 			return;
 		}
 		if (pathsout[cond].size() < ubound) {
 			pathsout[cond].push_back(path); 
-
 			++size, ++count;
-			autobalance();
+			if (main_container != nullptr && size > 1024)
+				push_back_flush_main();
+			if (main_container == nullptr)
+				autobalance();
 		}
-		mut.unlock();
+	}
+	
+	void push_back_flush_main()
+	{
+		if (main_container != nullptr)
+		{
+			boost::lock_guard<boost::mutex> lock(mut);
+			for (unsigned i = 0; i < pathsout.size(); ++i)
+			{
+				if (i <= main_container->maxcond)
+				{
+					main_container->size += pathsout[i].size();
+					for (auto& p : pathsout[i])
+						main_container->pathsout[i].push_back(p);
+				}
+				pathsout[i].clear();
+			}
+			size = 0;
+			main_container->count += count;
+			count = 0;
+			main_container->verified += verified;
+			verified = 0;
+			main_container->verifiedbad += verifiedbad;
+			verifiedbad = 0;
+			main_container->autobalance();
+			maxcond = main_container->maxcond;
+		}
 	}
 
 	void autobalance()
@@ -355,6 +409,7 @@ public:
 	int uct, ucb;
 	char ucc;
 
+	path_container_autobalance* main_container;
 };
 
 

@@ -216,10 +216,13 @@ progress_display* dostep_progress = 0;
 unsigned dostep_index = 0;
 struct dostep_thread {
 	dostep_thread(vector<differentialpath>& in, path_container_autobalance& out)
-		: pathsin(in), container(out)   
-	{}
+		: pathsin(in), container(out), helpcontainer(out)
+	{
+		helpcontainer.main_container = &container;
+	}
 	vector<differentialpath>& pathsin;
 	path_container_autobalance& container;
+	path_container_autobalance helpcontainer;
 	md5_forward_thread worker;
 	void operator()() {
 		try {
@@ -227,7 +230,7 @@ struct dostep_thread {
 				mut.lock();
 				unsigned i = dostep_index;
 				unsigned iend = i + (unsigned(pathsin.size() - dostep_index)>>4);
-				if (iend > i+4) iend = i+4;
+				if (iend > i+16) iend = i+16;
 				if (iend == i && i < pathsin.size())
 					iend = i+1;
 				if (iend != i)
@@ -237,8 +240,12 @@ struct dostep_thread {
 				if (i >= pathsin.size())
 					break;
 				for (; i < iend; ++i)
-					worker.md5_forward_differential_step(pathsin[i], container);
+					worker.md5_forward_differential_step(pathsin[i], helpcontainer);
 			}
+			if (helpcontainer.estimatefactor != 0)
+				helpcontainer.estimate_flush_main();
+			else
+				helpcontainer.push_back_flush_main();
 		} catch (std::exception & e) { cerr << "Worker thread: caught exception:" << endl << e.what() << endl; } catch (...) {}
 	}       
 };
