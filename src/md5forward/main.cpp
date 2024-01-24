@@ -273,16 +273,16 @@ int main(int argc, char** argv)
 			containertmp.t = tt;
 			if (tt == 1 && container.ubound > 0)
 			{
-				containertmp.ubound >>= 3;
+				containertmp.ubound >>= 2;
 				containertmp.maxcond = 157;
 			}
 			if (tt == 2 && container.ubound > 0)
 			{
-				containertmp.ubound >>= 2;
+				containertmp.ubound >>= 1;
 				containertmp.maxcond = 177;
 			}
 			if (tt == 3 && container.ubound > 0)
-				containertmp.ubound >>= 1;
+				containertmp.ubound >>= 0;
 			dostep(containertmp, true);
 		}
 		container.t += container.trange;
