@@ -256,7 +256,7 @@ public:
 				{
 					main_container->size += pathsout[i].size();
 					for (auto& p : pathsout[i])
-						main_container->pathsout[i].push_back(p);
+						main_container->pathsout[i].emplace_back( std::move(p) );
 				}
 				pathsout[i].clear();
 			}
@@ -302,8 +302,10 @@ public:
 		for (unsigned k = 0; k < pathsout.size() && k <= maxcond; ++k)
 		{
 			unsigned index = unsigned(outpaths.size());
-			outpaths.resize(index + pathsout[k].size());
-			std::copy(pathsout[k].begin(), pathsout[k].end(), outpaths.begin()+index);
+			// outpaths.resize(index + pathsout[k].size());
+			for (auto& p : pathsout[k])
+				outpaths.emplace_back( std::move(p) );
+			//std::copy(pathsout[k].begin(), pathsout[k].end(), outpaths.begin()+index);
 		}
                 unsigned hbound = unsigned(double(ubound)*fillfraction);
                 unsigned k = maxcond+1;
@@ -312,8 +314,10 @@ public:
                         unsigned length = hbound-index;
                         if (length > pathsout[k].size())
                                 length = pathsout[k].size();
-			outpaths.resize(index + length);
-                        std::copy(pathsout[k].begin(), pathsout[k].begin()+length, outpaths.begin()+index);
+			//outpaths.resize(index + length);
+			for (size_t i = 0; i < length; ++i)
+				outpaths.emplace_back( std::move(pathsout[k][i]) );
+                        //std::copy(pathsout[k].begin(), pathsout[k].begin()+length, outpaths.begin()+index);
                         ++k;
                 }
 	}

@@ -389,7 +389,7 @@ void dostep(path_container_autobalance& container, bool savetocache)
 		return;
 	}
 
-	random_permutation(pathsout);
+	//random_permutation(pathsout);
 	boost::thread_group mythreads;
 	unsigned threads = std::min<unsigned>(container.threads, splitsave);
 	for (unsigned j = 0; j < threads; ++j)
@@ -399,9 +399,13 @@ void dostep(path_container_autobalance& container, bool savetocache)
 				for (unsigned i = j; i < splitsave; i += threads)
 				{
 					std::string filenameout = pathsstring("paths" + boost::lexical_cast<std::string>(t), i, splitsave);
-					size_t start = double(i)*double(pathsout.size())/double(splitsave);
-					size_t end = double(i+1)*double(pathsout.size())/double(splitsave);
-					vector<differentialpath> pathsouti(pathsout.begin()+start, pathsout.begin()+end);
+					vector<differentialpath> pathsouti;
+					pathsouti.reserve( size_t(double(pathsout.size())/double(splitsave)+2) );
+					for (size_t k = i; k < pathsout.size(); k += splitsave)
+						pathsouti.emplace_back( std::move( pathsout[k] ) );
+//					size_t start = double(i)*double(pathsout.size())/double(splitsave);
+//					size_t end = double(i+1)*double(pathsout.size())/double(splitsave);
+//					vector<differentialpath> pathsouti(pathsout.begin()+start, pathsout.begin()+end);
 					save_gz(pathsouti, filenameout, binary_archive);
 					cout << " " << i;
 				}
