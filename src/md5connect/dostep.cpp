@@ -117,7 +117,18 @@ void dostep(path_container& container)
 	vector< differentialpath > pathsinhigh, pathsout;
 	boost::thread_group mythreads;
 	vector< differentialpath> pathsinlow;
+	// load lower paths in separate thread
 	mythreads.create_thread([&pathsinlow, &container]() {
+		if (container.waitinputfile)
+		{
+			while (true)
+			{
+				boost::system::error_code ec;
+				if (boost::filesystem::exists(container.inputfilelow, ec))
+					break;
+				boost::this_thread::sleep(boost::posix_time::milliseconds(100));
+			}
+		}
 		try {
 			cout << "Loading " << container.inputfilelow << "..." << flush;
 			load_gz(pathsinlow, binary_archive, container.inputfilelow);
@@ -127,11 +138,21 @@ void dostep(path_container& container)
 			cout << "failed." << endl;
 		}
 		});
-
+	// load upper paths in main thread
+	if (container.waitinputfile)
+	{
+		while (true)
+		{
+			boost::system::error_code ec;
+			if (boost::filesystem::exists(container.inputfilehigh, ec))
+				break;
+			boost::this_thread::sleep(boost::posix_time::milliseconds(100));
+		}
+	}
 	if (modn > 1) {
 		try {
-			vector< differentialpath > pathstmp2;
 			cout << "Loading " << container.inputfilehigh << "..." << flush;
+			vector< differentialpath > pathstmp2;
 			load_gz(pathstmp2, binary_archive, container.inputfilehigh);
 			random_permutation(pathstmp2);
 			for (unsigned j = modi; j < pathstmp2.size(); j += modn)
@@ -151,7 +172,9 @@ void dostep(path_container& container)
 			cout << "failed." << endl;
 		}
 	}
+	// wait until both are ready
 	mythreads.join_all();
+
 	if (pathsinhigh.size() == 0)
 		throw std::runtime_error("No upper differential paths loaded!");
 	if (pathsinlow.size() == 0)

@@ -292,7 +292,7 @@ public:
 	unsigned modn;
 	unsigned modi;
 	std::string inputfilelow, inputfilehigh;
-	bool showinputpaths;
+	bool showinputpaths, waitinputfile;
 
 	differentialpath bestpath;
 	vector<differentialpath> bestpaths;
