@@ -213,16 +213,14 @@ void dostep1(const path_container_autobalance& container)
 
 
 progress_display* dostep_progress = 0;
-unsigned dostep_index = 0;
+volatile unsigned dostep_index = 0;
 struct dostep_thread {
 	dostep_thread(vector<differentialpath>& in, path_container_autobalance& out)
-		: pathsin(in), container(out), helpcontainer(out)
+		: pathsin(in), container(out)
 	{
-		helpcontainer.main_container = &container;
 	}
 	vector<differentialpath>& pathsin;
 	path_container_autobalance& container;
-	path_container_autobalance helpcontainer;
 	md5_forward_thread worker;
 	void operator()() {
 		try {
@@ -240,13 +238,16 @@ struct dostep_thread {
 				if (i >= pathsin.size())
 					break;
 				for (; i < iend; ++i)
-					worker.md5_forward_differential_step(pathsin[i], helpcontainer);
+					worker.md5_forward_differential_step(pathsin[i], container);
 			}
-			if (helpcontainer.estimatefactor != 0)
-				helpcontainer.estimate_flush_main();
-			else
-				helpcontainer.push_back_flush_main();
-		} catch (std::exception & e) { cerr << "Worker thread: caught exception:" << endl << e.what() << endl; } catch (...) {}
+			if (container.main_container != nullptr)
+			{
+				if (container.estimatefactor != 0)
+					container.estimate_flush_main();
+				else
+					container.push_back_flush_main();
+			}
+		} catch (std::exception & e) { cerr << "Worker thread: caught exception:" << endl << e.what() << endl; } catch (...) { cerr << "Worker thread: caught unknown exception!" << endl; }
 	}       
 };
 void dostep_threaded(vector<differentialpath>& in, path_container_autobalance& out)
@@ -258,10 +259,18 @@ void dostep_threaded(vector<differentialpath>& in, path_container_autobalance& o
 		dostep_progress = new progress_display(in.size(), true, cout, tstring, "      ", "e     ");
 	else
 		dostep_progress = new progress_display(in.size(), true, cout, tstring, "      ", "      ");
+
+	// copy helpcontainers BEFORE threads start, to avoid a race with early threads pushing data to out already
+	vector< path_container_autobalance > helpcontainers(out.threads, out);
+
 	boost::thread_group mythreads;
 	for (unsigned i = 0; i < out.threads; ++i)
-		mythreads.create_thread(dostep_thread(in,out));
+	{
+		helpcontainers[i].main_container = &out;
+		mythreads.create_thread(dostep_thread(in,helpcontainers[i]));
+	}
 	mythreads.join_all();
+
 	if (dostep_progress->expected_count() != dostep_progress->count())
 		*dostep_progress += dostep_progress->expected_count() - dostep_progress->count();
 	delete dostep_progress;
