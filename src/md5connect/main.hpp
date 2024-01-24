@@ -347,10 +347,10 @@ struct diffpathupper_less
 		if (_Left.path.size() < 3)
 			throw std::runtime_error("Lower differential paths of insufficient size");
 		unsigned t = _Left.tbegin() - 1;
-		uint32 LdQtp1   = _Left[t+1].diff();
-		uint32 RdQtp1   = _Right[t+1].diff();
 		if (_Left[t+1].hw() > _Right[t+1].hw()) return true;
 		if (_Left[t+1].hw() < _Right[t+1].hw()) return false;
+		uint32 LdQtp1   = _Left[t+1].diff();
+		uint32 RdQtp1   = _Right[t+1].diff();
 		for (unsigned b = 0; b < 32; ++b)
 		{
 			if ((LdQtp1 & (1<<b)) < (RdQtp1 & (1<<b)))

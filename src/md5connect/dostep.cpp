@@ -71,22 +71,34 @@ struct dostep_thread {
 	path_container& container;
 	void operator()() {
 		md5_connect_thread* worker = new md5_connect_thread;
-		try {			
+		try {
+			vector<differentialpath> buf;
+			unsigned i = xrng128() % pathsinhigh.size();
 			while (true) {
+				buf.clear();
 				mut.lock();
-				unsigned i = dostep_index;
-				unsigned iend = i + (unsigned(pathsinhigh.size() - dostep_index)>>4);
-				if (iend > i+4) iend = i+4;
-				if (iend == i && i < pathsinhigh.size())
-					iend = i+1;
-				if (iend != i)
-					(*dostep_progress) += iend-i;
-				dostep_index = iend;
-				mut.unlock();
-				if (i >= pathsinhigh.size())
+				if (dostep_index >= pathsinhigh.size())
+				{
+					mut.unlock();
 					break;
-				for (; i < iend; ++i)
-					worker->md5_connect(pathsinlow, pathsinhigh[i], container);
+				}
+				unsigned cnt = std::max<unsigned>(1, std::min<unsigned>(64, (pathsinhigh.size() - dostep_index)>>4));
+				while (buf.size() != cnt)
+				{
+					while (pathsinhigh[i].tbegin() == pathsinhigh[i].tend())
+					{
+						++i;
+						if (i >= pathsinhigh.size())
+							i -= pathsinhigh.size();
+					}
+					buf.emplace_back( std::move(pathsinhigh[i]) );
+					pathsinhigh[i].clear();
+					++dostep_index;
+					++(*dostep_progress);
+				}
+				mut.unlock();
+				for (auto& ph : buf)
+					worker->md5_connect(pathsinlow, ph, container);
 			}
 		} catch (std::exception & e) { cerr << "Worker thread: caught exception:" << endl << e.what() << endl; } catch (...) {}
 		delete worker;
