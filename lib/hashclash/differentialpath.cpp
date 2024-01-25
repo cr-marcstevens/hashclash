@@ -251,9 +251,9 @@ namespace hashclash {
 		return false;
 	}
 
-	bool test_path_fast(const differentialpath& path, const uint32 blockdiff[])
+	bool test_path_fast(const differentialpath& path, const uint32 blockdiff[], int tbegin, int tend)
 	{
-		for (int t = path.tbegin(); t < path.tend(); ++t)
+		for (int t = std::max<int>(tbegin,path.tbegin()+3); t+1 < path.tend() && t < tend; ++t)
 		{			
 			if (t-3 >= path.tbegin() && t+1 < path.tend() && t >= 0 && t < 64) 
 			{
