@@ -433,8 +433,8 @@ void find_collision(const trail_type& trail1, const trail_type& trail2)
 		string filename2 = workdir + "/birthdayblock2_" + boost::lexical_cast<string>(v)+"_" + boost::lexical_cast<string>(w)+".bin";
 		ofstream of1(filename1.c_str(), ios::binary | ios::app);
 		ofstream of2(filename2.c_str(), ios::binary | ios::app);
-		save_block(of1,msg1);
-		save_block(of2,msg2);
+		save_block(of1,lmsg1);
+		save_block(of2,lmsg2);
 		cout << "Wrote birthdaycollision block to: " << endl;
 		cout << "\t" << filename1 << endl << "\t" << filename2 << endl;
 #endif
