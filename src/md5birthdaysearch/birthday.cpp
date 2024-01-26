@@ -428,7 +428,7 @@ void find_collision(const trail_type& trail1, const trail_type& trail2)
 		cout << oc2 << " " << oa2 << " " << ob2 << endl;
 #if 1
 		quit = true;
-#else
+// #else // for distributed birthday search this is preferable.
 		string filename1 = workdir + "/birthdayblock1_" + boost::lexical_cast<string>(v)+"_" + boost::lexical_cast<string>(w)+".bin";
 		string filename2 = workdir + "/birthdayblock2_" + boost::lexical_cast<string>(v)+"_" + boost::lexical_cast<string>(w)+".bin";
 		ofstream of1(filename1.c_str(), ios::binary | ios::app);
