@@ -78,7 +78,7 @@ public:
 	{
 		if (main_container != nullptr)
 			return;
-		cerr << "Autobalance parameters: maxcond=" << maxcond << endl;
+		cerr << "Autobalance parameters: maxcond=" << maxcond << " (ab#:" << count_balanced << ")" << endl;
 		if (!noverify)
 			cerr << "Verified: " << verifiedbad << " bad out of " << verified << endl;
 	}
@@ -156,10 +156,12 @@ public:
 				maxcond += (nafestweight>>1);
 			else
 				maxcond += nafestweight;
-		pathsout.clear();
 		pathsout.resize(maxcond + 1);
-		condcount.clear();
+		for (auto& v : pathsout)
+			v.clear();
 		condcount.resize(maxcond + 1);
+		for (auto& v : condcount)
+			v = 0;
 	}
 
 	void push_back(const differentialpath& path, unsigned cond = 0)
@@ -289,19 +291,23 @@ public:
 			} else {
 				size = newsize + pathsout[k].size();
 				maxcond = k;
+				if (size > ubound)
+					maxcond = k-1;
 			}
 			for (unsigned j = maxcond+2; j < pathsout.size(); ++j)
 				pathsout[j].clear();
 		}
 	}
 
-	void export_results(vector< differentialpath >& outpaths) const
+	void export_results(vector< differentialpath >& outpaths)
 	{
 		outpaths.clear();
 		outpaths.reserve(ubound);
 		for (unsigned k = 0; k < pathsout.size() && k <= maxcond; ++k)
 		{
-			unsigned index = unsigned(outpaths.size());
+			if (ubound > 0 && outpaths.size() + pathsout[k].size() > ubound)
+				pathsout[k].resize(ubound - outpaths.size());
+			//unsigned index = unsigned(outpaths.size());
 			// outpaths.resize(index + pathsout[k].size());
 			for (auto& p : pathsout[k])
 				outpaths.emplace_back( std::move(p) );
