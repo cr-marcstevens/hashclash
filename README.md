@@ -104,7 +104,7 @@ $ xxd collision1.bin
 
 - Make your own attack
 
-  Inside poc_no.sh there are three example identical-prefix collision attacks,
+  Inside poc_no.sh there are three examples of identical-prefix collision attacks,
   selected by N=1, 2 or 3.
   You can add your own choice of message word differences here
-  and see if you can make own collision attack!
+  and see if you can make your own collision attack!
