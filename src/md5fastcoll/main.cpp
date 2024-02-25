@@ -22,7 +22,7 @@ version 1.0.0.5-1, April 2006.
 
 Copyright
 =========
-© M. Stevens, 2006. All rights reserved.
+Â© M. Stevens, 2006. All rights reserved.
 
 Disclaimer
 ==========
@@ -87,8 +87,8 @@ int main()
 #include <boost/filesystem/operations.hpp>
 #include <boost/program_options.hpp>
 #include <boost/lexical_cast.hpp>
-#include <boost/timer.hpp>
 #include <boost/cstdint.hpp>
+#include <hashclash/timer.hpp>
 
 typedef boost::uint64_t uint64;
 
@@ -121,7 +121,7 @@ int main(int argc, char** argv)
 
 	try
 	{
-		boost::timer runtime;
+		hashclash::timer runtime(true);
 
 		po::options_description desc("Allowed options");
 		desc.add_options()
@@ -292,7 +292,7 @@ int main(int argc, char** argv)
 		save_block(ofs2, msg2block0);
 		save_block(ofs2, msg2block1);
 		if (verbose)
-			cout << "Running time: " << runtime.elapsed() << " s" << endl;
+			cout << "Running time: " << runtime.time() << " s" << endl;
 		return 0;
 	} catch (exception& e)
 	{
@@ -313,12 +313,12 @@ void test_md5iv(bool single)
 	uint32 msg2block0[16];
 	uint32 msg2block1[16];
 
-	boost::timer runtime;
+	hashclash::timer runtime(true);
 	while (true)
 	{
-		runtime.restart();
+		runtime.start();
 		find_collision(IV, msg1block0, msg1block1, msg2block0, msg2block1);
-		double time = runtime.elapsed();
+		double time = runtime.time();
 		cout << endl << "Running time: " << time << " s" << endl;
 		ofstream of_timings("timings_md5iv.txt", ios::app);
 		of_timings << time << endl;
@@ -334,13 +334,13 @@ void test_rndiv(bool single)
 	uint32 msg2block0[16];
 	uint32 msg2block1[16];
 
-	boost::timer runtime;
+	hashclash::timer runtime(true);
 	while (true)
 	{
-		runtime.restart();
+		runtime.start();
 		IV[0] = xrng64(); IV[1] = xrng64(); IV[2] = xrng64(); IV[3] = xrng64();
 		find_collision(IV, msg1block0, msg1block1, msg2block0, msg2block1);
-		double time = runtime.elapsed();
+		double time = runtime.time();
 		cout << endl << "Running time: " << time << " s" << endl;
 		ofstream of_timings("timings_rndiv.txt", ios::app);
 		of_timings << time << endl;
@@ -356,16 +356,16 @@ void test_reciv(bool single)
 	uint32 msg2block0[16];
 	uint32 msg2block1[16];
 
-	boost::timer runtime;
+	hashclash::timer runtime(true);
 	while (true)
 	{
-		runtime.restart();
+		runtime.start();
 		IV[0] = xrng64(); IV[1] = xrng64(); IV[2] = xrng64(); IV[3] = xrng64();
 		IV[2] |= 1<<25; IV[2] ^= ((IV[2] & (1<<24))<<1);
 		IV[3] &= ~(1<<25); IV[3] ^= ((IV[3] & (1<<24))<<1);
 
 		find_collision(IV, msg1block0, msg1block1, msg2block0, msg2block1);
-		double time = runtime.elapsed();
+		double time = runtime.time();
 		cout << endl << "Running time: " << time << " s" << endl;
 		ofstream of_timings("timings_reciv.txt", ios::app);
 		of_timings << time << endl;
