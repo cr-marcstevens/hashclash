@@ -14,7 +14,7 @@ jobs:
       fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Install dependencies (ubuntu)
       run: sudo apt-get install -y libboost-system-dev libboost-filesystem-dev libboost-iostreams-dev libboost-thread-dev libboost-serialization-dev libboost-program-options-dev
       if: matrix.os == 'ubuntu-latest'
@@ -40,8 +40,8 @@ jobs:
       fail-fast: false
     runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions/cache@v2.1.6
+    - uses: actions/checkout@v4
+    - uses: actions/cache@v4
       with:
         path: boost_*.tar.gz
         key: ${{ matrix.os }}
