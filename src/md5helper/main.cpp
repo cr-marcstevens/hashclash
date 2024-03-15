@@ -103,6 +103,9 @@ int main(int argc, char** argv)
 			("pathtyperange"
 				, po::value<unsigned>(&parameters.pathtyperange)->default_value(0)
 				, "Increases potential # diffs eliminated per n.c.")
+			("alphabet"
+				, po::value<std::string>(&parameters.alphabet)
+				, "Use message alphabet for collisionfinding")
 
 			("skipnc"
 				, po::value<unsigned>(&parameters.skipnc)->default_value(0)

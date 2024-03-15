@@ -21,6 +21,7 @@
 #include <algorithm>
 #include <map>
 #include <stdexcept>
+#include <unordered_map>
 
 #define MD5DETAIL_INLINE_IMPL
 #include <hashclash/saveload_gz.hpp>
@@ -29,6 +30,7 @@
 #include <hashclash/booleanfunction.hpp>
 #include <hashclash/rng.hpp>
 #include <hashclash/timer.hpp>
+#include <hashclash/progress_display.hpp>
 
 #include <boost/lexical_cast.hpp>
 
@@ -1162,6 +1164,1160 @@ void collisionfinding_thread::filltables()
 	cout << "25: Q14Q3m14tunnel  = " << hw(Q14Q3m14tunnel) << endl;
 
 }
+static const uint64_t Q7m12m13m14size = 1ULL<<28;
+
+
+
+void collisionfinding_alphabet_thread::do_step23()
+{
+	if (++testcounts[223] == 1)
+		std::cout << "t22 t23 " << std::flush;
+	std::cout << "T1Q7 " << std::flush;
+	// known: m[15], m[1], m[6], m[11], m[0], m[5], m[10], set of { m[14], m[13] }
+	// satisfied: Q12 -- Q23
+	// precompute list of { m[12], m[13], m[14] => Q7 } for matching in dostep23
+	Q7m12m13m14.clear();
+	Q7m12m13m14.reserve(Q7m12m13m14size);
+	unsigned l1 = 0, l2 = 0, l3 = 0, y = 0;
+	for (auto& x : m14m13)
+	{
+		if (++y > 2 && Q7m12m13m14.empty())
+			break;
+		m[14] = x.first;
+		m[13] = x.second;
+		computeQtm3(14);
+		computeQtm3(13);
+		
+		auto m12range = MA.word_range(12);
+		auto Q9mv = masked_value_QtQtp1(9);
+//		std::cout << "." << std::flush; // << m12range.count() << " " << hammingweight(masked_value_QtQtp1(8).mask) << " " << std::flush;
+		for (uint32_t m12 : m12range)
+		{
+			m[12] = m12;
+			computeQtm3(12);
+//			std::cout << std::hex << Qt(9) << std::dec << " " << std::flush;
+			if (!Q9mv.check(Qt(9)))
+				continue;
+//			if (hammingweight(++l1) == 1) std::cout << "L1=" << l1 << std::flush;
+			computeQtm3(11);
+			if (!masked_value_QtQtp1(8).check(Qt(8)))
+				continue;
+			if (hammingweight(++l2) == 1) std::cout << "L2=" << l2 << std::flush;
+			computeQtm3(10);
+			if (!masked_value_QtQtp1(7).check(Qt(7)))
+				continue;
+			if (hammingweight(++l3) == 1) std::cout << "L3=" << l3 << std::flush;
+				
+			Q7m12m13m14.emplace_back(Qt(7), m[12], m[13], m[14]);
+			std::cout << "+" << std::flush;
+			throw;
+			if (Q7m12m13m14.size() >= Q7m12m13m14size)
+				break;
+		}
+		if (Q7m12m13m14.size() >= Q7m12m13m14size)
+			break;
+	}
+	std::cout << Q7m12m13m14.size() << std::endl;
+}
+
+void collisionfinding_alphabet_thread::do_step21()
+{
+	if (++testcounts[221] == 1)
+		std::cout << "t21 " << std::flush;
+	auto m10range = MA.word_range(10);
+	auto Q22mv = masked_value_QtQtm1(22);
+	if (m10range.count() < Q22mv.count())
+	{
+		std::cout << "t21m " << std::flush;
+//		unsigned x = 0;
+		for (uint32_t m10 : m10range)
+		{
+//			if (hammingweight(++x) == 1)
+//				std::cout << x << " " << std::flush;
+			m[10] = m10;
+			computeQtp1(21);
+			if (!Q22mv.check(Qt(22)))
+				continue;
+			auto Q23mv = masked_value_QtQtm1(23);
+			computeQtp1(22); // using known m[15]
+			if (Q23mv.check(Qt(23)))
+				do_step23();
+		}
+	} else
+	{
+		std::cout << "t21Q " << std::flush;
+		for (uint32_t Q22 : Q22mv.range_rnd())
+		{
+			Qt(22) = Q22;
+			computeWt(21);
+			if (!MA.checkword(10, m[10]))
+				continue;
+			auto Q23mv = masked_value_QtQtm1(23);
+			computeQtp1(22); // using known m[15]
+			if (Q23mv.check(Qt(23)))
+				do_step23();
+		}
+	}
+}
+
+void collisionfinding_alphabet_thread::do_step20()
+{
+	if (++testcounts[220] == 1)
+		std::cout << "t20 " << std::flush;
+	auto m5range = MA.word_range(5);
+	auto Q21mv = masked_value_QtQtm1(21);
+	if (m5range.count() < Q21mv.count())
+	{
+		std::cout << "t20m " << std::flush;
+//		unsigned x = 0;
+		for (uint32_t m5 : m5range)
+		{
+//			if (hammingweight(++x) == 1)
+//				std::cout << x << " " << std::flush;
+			m[5] = m5;
+			computeQtp1(20);
+			if (!Q21mv.check(Qt(21)))
+				continue;
+			do_step21();
+		}
+	} else
+	{
+		std::cout << "t20Q " << std::flush;
+		for (uint32_t Q21 : Q21mv.range_rnd())
+		{
+			Qt(21) = Q21;
+			computeWt(20);
+			if (!MA.checkword(5, m[5]))
+				continue;
+			do_step21();
+		}
+	}
+}
+
+void collisionfinding_alphabet_thread::do_step19()
+{
+	if (++testcounts[219] == 1)
+		std::cout << "t19 " << std::flush;
+	auto m0range = MA.word_range(0);
+	auto Q20mv = masked_value_QtQtm1(20);
+	if (m0range.count() < Q20mv.count())
+	{
+//		std::cout << "t19m " << std::flush;
+		unsigned x = 0;
+		for (uint32_t m0 : m0range)
+		{
+//			if (hammingweight(++x) == 1)
+//				std::cout << x << " " << std::flush;
+			m[0] = m0;
+			computeQtp1(19);
+			if (!Q20mv.check(Qt(20)))
+				continue;
+			do_step20();
+		}
+	} else
+	{
+		std::cout << "t19Q " << std::flush;
+		for (uint32_t Q20 : Q20mv.range_rnd())
+		{
+			Qt(20) = Q20;
+			computeWt(19);
+			if (!MA.checkword(0, m[0]))
+				continue;
+			do_step20();
+		}
+	}
+}
+
+void collisionfinding_alphabet_thread::do_step18()
+{
+	if (++testcounts[218] == 1)
+		std::cout << "t18 " << std::flush;
+	auto m11range = MA.word_range(11);
+	auto Q19mv = masked_value_QtQtm1(19);
+	if (m11range.count() < Q19mv.count())
+	{
+		std::cout << "t18m " << std::flush;
+//		unsigned x = 0;
+		for (uint32_t m11 : m11range)
+		{
+//			if (hammingweight(++x) == 1)
+//				std::cout << x << " " << std::flush;
+			m[11] = m11;
+			computeQtp1(18);
+			if (!Q19mv.check(Qt(19)))
+				continue;
+			do_step19();
+		}
+	} else
+	{
+		std::cout << "t18Q " << std::flush;
+		for (uint32_t Q19 : Q19mv.range_rnd())
+		{
+			Qt(19) = Q19;
+			computeWt(18);
+			if (!MA.checkword(11, m[11]))
+				continue;
+			do_step19();
+		}
+	}
+}
+
+void collisionfinding_alphabet_thread::do_step17()
+{
+//	if (++testcounts[217] == 1)
+		std::cout << "t17 " << std::flush;
+	auto m6range = MA.word_range(6);
+	auto Q18mv = masked_value_QtQtm1(18);
+	if (m6range.count() < Q18mv.count())
+	{
+		std::cout << "t17m " << std::flush;
+//		unsigned x = 0;
+		for (uint32_t m6 : m6range)
+		{
+//			if (hammingweight(++x) == 1)
+//				std::cout << x << " " << std::flush;
+			m[6] = m6;
+			computeQtp1(17);
+			if (!Q18mv.check(Qt(18)))
+				continue;
+			do_step18();
+		}
+	} else
+	{
+		std::cout << "t17Q " << std::flush;
+		for (uint32_t Q18 : Q18mv.range_rnd())
+		{
+			Qt(18) = Q18;
+			computeWt(17);
+			if (!MA.checkword(6, m[6]))
+				continue;
+			do_step18();
+		}
+	}
+}
+
+
+void collisionfinding_alphabet_thread::extend_step_fw(int t, vec_state_t& out, vec_state_t& in, uint64_t N)
+{
+	int wt = md5_wt[t];
+	out.clear(); out.reserve(N);
+	
+	std::cout << "\n======\nStep " << t << ": (Q" << (t+1) << ",m" << wt << "):";
+	progress_display pd(N);
+	
+	auto wtrange = MA.word_range(wt);
+	const size_t wtrangecount = wtrange.count(), Qtp1count = masked_value_QtQtm1(t+1).count();
+
+	uint64_t attempts = 0;
+	while (out.size() < N)
+	{
+		out.emplace_back();
+		auto& cur = out.back();
+		while (true)
+		{
+			++attempts;
+			// sample random input value
+			auto& incur = in[ xrng64() % in.size() ];
+			// copy just the Q values needed for step t
+			for (unsigned i = offset+t-3; i <= offset+t+1; ++i)
+				Q[i] = incur[i];
+			auto Qtp1mv = masked_value_QtQtm1(t+1);
+			if (Qtp1count < wtrangecount)
+			{
+				Qt(t+1) = Qtp1mv.sample();
+				computeWt(t);
+				if (!MA.checkword(wt, m[wt]))
+					continue;
+			} else {
+				m[wt] = MA.sampleword(wt);
+				computeQtp1(t);
+				if (!Qtp1mv.check(Qt(t+1)))
+					continue;
+			}
+			if (!checkrotationQtQtp1(t))
+				continue;
+			// found solution
+			cur = incur;
+			cur[offset+t+1] = Qt(t+1);
+			++pd;
+			break;
+		}
+	}
+	std::cout << "Step " << t << ": attempts: 2^" << log(double(attempts))/log(2.0) << ", success rate: 2^" << log(double(N)/double(attempts))/log(2.0) << std::endl;
+}
+
+void collisionfinding_alphabet_thread::extend_step_bw(int t, vec_state_t& out, vec_state_t& in, uint64_t N)
+{
+	int wt = md5_wt[t];
+	out.clear(); out.reserve(N);
+	
+	std::cout << "\n======\nStep " << t << ": (Q" << (t-3) << ",m" << wt << "):";
+	progress_display pd(N);
+	
+	auto wtrange = MA.word_range(wt);
+	const size_t wtrangecount = wtrange.count(), Qtm3count = masked_value_QtQtp1(t-3).count();
+
+	uint64_t attempts = 0;
+	while (out.size() < N)
+	{
+		out.emplace_back();
+		auto& cur = out.back();
+		while (true)
+		{
+			++attempts;
+			// sample random input value
+			auto& incur = in[ xrng64() % in.size() ];
+			// copy just the Q values needed for step t
+			for (unsigned i = offset+t-3; i <= offset+t+1; ++i)
+				Q[i] = incur[i];
+			auto Qtm3mv = masked_value_QtQtp1(t-3);
+			if (Qtm3count < wtrangecount)
+			{
+				Qt(t-3) = Qtm3mv.sample();
+				computeWt(t);
+				if (!MA.checkword(wt, m[wt]))
+					continue;
+			} else {
+				m[wt] = MA.sampleword(wt);
+				computeQtm3(t);
+				if (!Qtm3mv.check(Qt(t-3)))
+					continue;
+			}
+			if (!checkrotationQtQtp1(t-3))
+				continue;
+			// found solution
+			cur = incur;
+			cur[offset+t-3] = Qt(t-3);
+			++pd;
+			break;
+		}
+	}
+	std::cout << "Step " << t << ": attempts: 2^" << log(double(attempts))/log(2.0) << ", success rate: 2^" << log(double(N)/double(attempts))/log(2.0) << std::endl;
+}
+
+void collisionfinding_alphabet_thread::extend_step_m11(vec_state_t& out, vec_state_t& in, uint64_t N)
+{
+	out.clear(); out.reserve(N);
+	
+	std::cout << "\n======\nStep: (m11,Q8,Q19):";
+	progress_display pd(N);
+	
+	uint64_t attempts = 0;
+	while (out.size() < N)
+	{
+		out.emplace_back();
+		auto& cur = out.back();
+		while (true)
+		{
+			++attempts;
+			// sample random input value
+			auto& incur = in[ xrng64() % in.size() ];
+			// copy just the Q values needed for step t
+			for (unsigned i = offset+8; i <= offset+19; ++i)
+				Q[i] = incur[i];
+			auto Q8mv = masked_value_QtQtp1(8);
+			auto Q19mv = masked_value_QtQtm1(19);
+			m[11] = MA.sampleword(11);
+			computeQtp1(18);
+			if (!Q19mv.check(Qt(19)))
+				continue;
+			computeQtm3(11);
+			if (!Q8mv.check(Qt(8)))
+				continue;
+			if (!checkrotationQtQtp1(8))
+				continue;
+			if (!checkrotationQtQtp1(18))
+				continue;
+			// found solution
+			cur = incur;
+			cur[offset+8] = Qt(8);
+			cur[offset+19] = Qt(19);
+			++pd;
+			break;
+		}
+	}
+	std::cout << "Step m11: attempts: 2^" << log(double(attempts))/log(2.0) << ", success rate: 2^" << log(double(N)/double(attempts))/log(2.0) << std::endl;
+}
+
+void collisionfinding_alphabet_thread::extend_step_m10(vec_state_t& out, vec_state_t& in, uint64_t N)
+{
+	out.clear(); out.reserve(N);
+	
+	std::cout << "\n======\nStep: (m10,Q7,Q22):";
+	progress_display pd(N);
+	
+	uint64_t attempts = 0;
+	while (out.size() < N)
+	{
+		out.emplace_back();
+		auto& cur = out.back();
+		while (true)
+		{
+			++attempts;
+			// sample random input value
+			auto& incur = in[ xrng64() % in.size() ];
+			// copy just the Q values needed for step t
+			for (unsigned i = offset+7; i <= offset+22; ++i)
+				Q[i] = incur[i];
+			computeWt(15);
+			
+			auto Q7mv = masked_value_QtQtp1(7);
+			auto Q22mv = masked_value_QtQtm1(22);
+			m[10] = MA.sampleword(10);
+			computeQtm3(10);
+			if (!Q7mv.check(Qt(7)))
+				continue;
+			computeQtp1(21); // m10
+			if (!Q22mv.check(Qt(22)))
+				continue;
+			computeQtp1(22); // m15
+			if (!Q22mv.check(Qt(23)))
+				continue;
+			if (!checkrotationQtQtp1(7))
+				continue;
+			if (!checkrotationQtQtp1(21))
+				continue;
+			if (!checkrotationQtQtp1(22))
+				continue;
+			// found solution
+			cur = incur;
+			cur[offset+7] = Qt(7);
+			cur[offset+22] = Qt(22);
+			cur[offset+23] = Qt(23);
+			++pd;
+			break;
+		}
+	}
+	std::cout << "Step m10: attempts: 2^" << log(double(attempts))/log(2.0) << ", success rate: 2^" << log(double(N)/double(attempts))/log(2.0) << std::endl;
+}
+
+void collisionfinding_alphabet_thread::do_step16_new()
+{
+	static const uint64_t N = 1ULL<<20;
+	vector< array<uint32_t, 32> > in, out;
+
+	std::cout << "Trying to load 'out.bin.gz'..." << std::flush;
+	try {
+		load_gz(out, "out", binary_archive);
+		std::cout << "done." << out.size() << std::endl;
+	} catch (std::exception& e)
+	{
+		out.clear();
+		std::cout << "failed." << std::endl;
+	}
+
+if (out.empty())
+{
+
+	in.reserve(N);
+	out.reserve(N);
+	
+	std::cout << "\n======\nGenerate Q13-Q17,m1:";
+	progress_display genpd(N);
+	uint64_t attempts = 0;
+	auto m1range = MA.word_range(1);
+	const size_t m1rangecount = m1range.count(), Q17count = masked_value_QtQtm1(17).count();
+	while (out.size() < N)
+	{
+		++attempts;
+		Qt(13) = masked_value_Qt(13).sample();
+		Qt(14) = masked_value_QtQtm1(14).sample();
+		Qt(15) = masked_value_QtQtm1(15).sample();
+		Qt(16) = masked_value_QtQtm1(16).sample();
+		
+		auto Q17 = masked_value_QtQtm1(17);
+		if (Q17count < m1rangecount)
+		{
+			Qt(17) = Q17.sample();
+			computeWt(16);
+			if (!MA.checkword(1, m[1]))
+				continue;
+		} else {
+			m[1] = MA.sampleword(1);
+			computeQtp1(16);
+			if (!Q17.check(Qt(17)))
+				continue;
+		}
+		++genpd;
+		out.emplace_back();
+		auto& cur = out.back();
+		for (int t = 13; t <= 17; ++t)
+			cur[offset+t] = Q[offset+t];
+	}
+	std::cout << "Generate Q13-Q17,m1: attempts: 2^" << log(double(attempts))/log(2.0) << " success rate: 2^" << log(double(N)/double(attempts))/log(2.0) << std::endl;
+	
+	// m12 - m15
+	for (int t = 15; t >= 12; --t)
+	{
+		std::swap(in, out); out.clear();
+		extend_step_bw(t, out, in, N);
+	}
+	std::swap(in, out); out.clear();
+	extend_step_fw(17, out, in, N); // m6
+	std::swap(in, out); out.clear();
+	extend_step_m11(out, in, N);    // m11
+	std::swap(in, out); out.clear();
+	extend_step_fw(19, out, in, N); // m0
+	std::swap(in, out); out.clear();
+	extend_step_fw(20, out, in, N); // m5
+	std::swap(in, out); out.clear();
+	extend_step_m10(out, in, N); // m10
+
+	save_gz(out, "out", binary_archive);
+} // if out not loaded successfully
+
+	// sort on maximum Q9m9 tunnel	
+	const uint32_t Q9m9 = (~Qvaluemask[offset+9] & ~Qprev[offset+10]);
+	std::sort(out.begin(), out.end(), 
+		[Q9m9](const state_t& l, const state_t& r) 
+		{
+			uint32_t lQ9m9 = Q9m9 & l[offset+11] & ~l[offset+10];
+			uint32_t rQ9m9 = Q9m9 & r[offset+11] & ~r[offset+10];
+			return hammingweight(lQ9m9) > hammingweight(rQ9m9);
+		});
+	std::cout << "Q9m9 tunnel best state: " << hammingweight(out.front()[offset+11] & ~(out.front()[offset+10]) & Q9m9) << std::endl;
+
+	std::map< std::array<uint32_t, 3>, std::array< uint32_t, 2 > > Q7810m1213;
+	std::unordered_multimap< uint32_t, std::array< uint32_t, 3 > > Q7m10m12m13;
+	std::vector<uint32_t> m10good;
+	for (auto& cur : out)
+	{
+		for (unsigned i = offset+7; i <= offset+23; ++i)
+			Q[i] = cur[i];
+		for (int t = 10; t < 16; ++t)
+		{
+			computeWt(t);
+			if (!MA.checkword(t, m[t]))
+				throw std::runtime_error("mt-alphabet violation");
+		}
+		const uint32_t m10org = m[10], m15org = m[15];
+		for (int t = 16; t <= 22; ++t)
+		{
+			computeWt(t);
+			if (!MA.checkword(md5_wt[t], m[md5_wt[t]]))
+				throw std::runtime_error("mt-alphabet violation");
+		}
+		if (m[10] != m10org)
+			throw std::runtime_error("m10-inconsistency");
+		if (m[15] != m15org)
+			throw std::runtime_error("m15-inconsistency");
+
+		uint32_t m13org = m[13], Q10org = Qt(10);
+		std::vector< std::pair<uint32_t,uint32_t> > m13good;
+		for (uint32_t m13 : MA.word_range(13))
+		{
+			m[13] = m13;
+			computeQtm3(13);
+			if (!masked_value_QtQtp1(10).check(Qt(10)))
+				continue;
+			if (!checkrotationQtQtp1(10))
+				continue;
+			m13good.emplace_back(m[13], Qt(10));
+		}
+		std::cout << "m13goodsize: " << m13good.size() << std::endl;
+		uint32 Q11 = Qt(11);
+		std::sort(m13good.begin(), m13good.end(), 
+			[Q11,Q9m9](auto& l, auto& r)
+			{
+				return hammingweight(Q9m9 & Q11 & ~l.second)
+					> hammingweight(Q9m9 & Q11 & ~r.second);
+			});
+		
+		// find m12 that still satisfies Q9 and Q8 conditions
+		// forget m12 for which there is already another m12 with same Q8 and Q7
+		// i.e. the difference is part of the Q9m9 tunnel
+		progress_display pdQ7810(m13good.size());
+		Q7810m1213.clear();
+		auto m12range = MA.word_range(12);
+		for (auto& m13Q10 : m13good)
+		{
+			++pdQ7810;
+		for (uint32_t m12 : m12range)
+		{
+			m[13] = m13Q10.first;
+			m[12] = m12;
+			m[10] = m10org;
+			computeQtm3(13);
+			if (!masked_value_QtQtp1(10).check(Qt(10)))
+				continue;
+			computeQtm3(12);
+			if (!masked_value_QtQtp1(9).check(Qt(9)))
+				continue;
+			computeQtm3(11);
+			if (!masked_value_QtQtp1(8).check(Qt(8)))
+				continue;
+			computeQtm3(10);
+			if (!checkrotationQtQtp1(10))
+				continue;
+			if (!checkrotationQtQtp1(9))
+				continue;
+			if (!checkrotationQtQtp1(8))
+				continue;
+			computeQtm3(10); // virtual Q7-under-m10org
+			Q7810m1213[ {Qt(7),Qt(8),Qt(10)} ] = { m[12], m[13] };
+			if (Q7810m1213.size() >= 1ULL<<18)
+				break;
+		}
+			if (Q7810m1213.size() >= 1ULL<<18)
+				break;
+		}
+		std::cout << "\nQ7810m1213size: " << Q7810m1213.size() << std::endl;
+
+		// find all m10 that satisfy Q22-Q23
+		m[4] = MA.sampleword(4);
+		m10good.clear();
+		auto m10range = MA.word_range(10);
+		auto Q22mv = masked_value_QtQtm1(22);
+		for (uint32_t m10 : m10range)
+		{
+			m[10] = m10;
+			computeQtp1(21); // m10
+			if (!Q22mv.check(Qt(22)))
+				continue;
+			computeQtp1(22); // m15
+			if (!masked_value_QtQtm1(23).check(Qt(23)))
+				continue;
+			computeQtp1(23); // m4
+			if (!masked_value_QtQtm1(24).check(Qt(24)))
+				continue;
+			if (!checkrotationQtQtp1(21))
+				continue;
+			if (!checkrotationQtQtp1(22))
+				continue;
+			if (!checkrotationQtQtp1(23))
+				continue;
+			m10good.emplace_back(m10);
+		}
+		std::cout << "m10goodsize: " << m10good.size() << std::endl;
+		
+		// iterate over those m12, and find all (m10, m12) satisfying Q7-Q9, Q22-Q23
+		progress_display pdm12m13(Q7810m1213.size());
+		Q7m10m12m13.clear();
+		auto Q7mv = masked_value_QtQtp1(7);
+		uint64_t Q7lookupstore = 0;
+		for (auto& Qm12it : Q7810m1213)
+		{
+			++pdm12m13;
+			m[12] = Qm12it.second[0];
+			m[13] = Qm12it.second[1];
+			computeQtm3(13);
+			computeQtm3(12);
+			computeQtm3(11);
+			for (uint32_t m10 : m10good)
+			{
+				m[10] = m10;
+				computeQtm3(10); // m10
+				if (!Q7mv.check(Qt(7)))
+					continue;
+				computeQtp1(21); // m10
+				if (!Q22mv.check(Qt(22)))
+					continue;
+				computeQtp1(22); // m15
+				if (!masked_value_QtQtm1(23).check(Qt(23)))
+					continue;
+				computeQtp1(23); // m4
+				if (!masked_value_QtQtm1(24).check(Qt(24)))
+					continue;
+				if (!checkrotationQtQtp1(7))
+					continue;
+				if (!checkrotationQtQtp1(21))
+					continue;
+				if (!checkrotationQtQtp1(22))
+					continue;
+				if (!checkrotationQtQtp1(23))
+					continue;
+				++Q7lookupstore;
+				Q7m10m12m13.emplace(Qt(7), std::array<uint32_t,3>({m[10],m[12],m[13]}));//std::pair<uint32_t,uint32_t>(m[10],m[12]);
+			}
+		}
+		std::cout << "Q7m10m12m13size: " << Q7m10m12m13.size() << " (out of " << Q7lookupstore << " good kept)" << std::endl;
+		
+		Q[0] = md5_iv[0]; Q[1] = md5_iv[3]; Q[2] = md5_iv[2]; Q[3] = md5_iv[1];
+		Q2[0] = md5_iv[0]; Q2[1] = md5_iv[3]; Q2[2] = md5_iv[2]; Q2[3] = md5_iv[1];
+		computeQtp1(0); // m0 is fixed
+		if (!masked_value_QtQtm1(1).check(Qt(1)))
+			throw std::runtime_error("Q1-inconsistency");
+		computeQtp1(1); // m1 is fixed
+		if (!masked_value_QtQtm1(2).check(Qt(2)))
+			throw std::runtime_error("Q2-inconsistency");
+		
+		auto m2range = MA.word_range(2);
+		auto m3range = MA.word_range(3);
+		auto m4range = MA.word_range(4);
+		uint64_t m4attempts = 0, Q7match = 0, Q7success = 0;
+		uint64_t Q7ok = 0, Q8ok = 0, Q9ok = 0;
+		uint64_t m4tunnelcnt = 0, m4tunnelok = 0;
+		for (uint32_t m2 : m2range)
+		{
+			m[2] = m2;
+			computeQtp1(2);
+			if (!masked_value_QtQtm1(3).check(Qt(3)))
+				continue;
+			for (uint32_t m3 : m3range)
+			{
+				m[3] = m3;
+				computeQtp1(3);
+				if (!masked_value_QtQtm1(4).check(Qt(4)))
+					continue;
+//				for (uint32_t m4 : m4range)
+				{
+					++m4attempts;
+//					m[4] = m4;
+					computeQtp1(4); // m4 fixed
+					if (!masked_value_QtQtm1(5).check(Qt(5)))
+						continue;
+					computeQtp1(5); // m5 fixed
+					if (!masked_value_QtQtm1(6).check(Qt(6)))
+						continue;
+					computeQtp1(6); // m6 fixed
+					if (!masked_value_QtQtm1(7).check(Qt(7)))
+						continue;
+					auto itend = Q7m10m12m13.equal_range(Qt(7));
+				for (auto it = itend.first; it != itend.second; ++it)
+				{
+					m[10] = it->second[0];//.first;
+					m[12] = it->second[1];//.second;
+					m[13] = it->second[2];
+					computeQtm3(13); // Q10
+					computeQtm3(12); // Q9
+					computeQtm3(11); // Q8
+					uint32_t Q7org = Qt(7);
+//					computeQtm3(10); // Q7
+//					if (Qt(7) != Q7org)
+//						throw std::runtime_error("Q7-inconsistency");
+					if (hammingweight(++Q7match) == 1)
+						std::cout << "Q7match=" << Q7match << " " << std::flush;
+
+/*						
+//					uint32_t Q4m4tunnel = (~Qvaluemask[offset+4] & ~Qprev[offset+5])
+//								& Qt(6) & ~Qt(5);
+//				uint32_t Q4org = Qt(4);
+//				for (uint32_t Q4cur : masked_value(~Q4m4tunnel, Q4org).range())
+//				{
+					++m4tunnelcnt;
+					Qt(4) = Q4cur;
+					computeWt(3);
+					if (!MA.checkword(3, m[3]))
+						continue;
+					computeWt(4);
+					if (!MA.checkword(4, m[4]))
+						continue;
+					computeWt(5);
+					if (!MA.checkword(5, m[5]))
+						continue;
+					computeWt(6);
+					if (!MA.checkword(6, m[6]))
+						continue;
+					++m4tunnelok;
+*/
+
+					computeWt(7);
+					if (!MA.checkword(7, m[7]))
+						continue;
+					if (hammingweight(++Q7ok) == 1)
+					{
+						std::cout << "Q7ok=" << Q7ok << " " << std::flush;
+//						std::cout << "(" << log(double(m4tunnelok)/double(m4tunnelcnt))/log(2.0) << ")" << std::flush;
+//						std::cout << "(" << log(double(m4tunnelcnt)/double(Q7match))/log(2.0) << ")" << std::flush;
+					}
+					computeWt(8);
+					if (!MA.checkword(8, m[8]))
+						continue;
+					if (hammingweight(++Q8ok) == 1)
+						std::cout << "Q8ok=" << Q8ok << " " << std::flush;
+					computeWt(9);
+					if (!MA.checkword(9, m[9]))
+						continue;
+					
+//					if (hammingweight(++Q7success) == 1)
+					std::cout << "\nQ7success=" << ++Q7success << " " << std::endl;
+					for (unsigned t = 0; t < 16; ++t)
+					{
+						std::cout << "m" << t << "=";
+						for (unsigned b = 0; b < 4; ++b)
+							std::cout << char((m[t]>>(8*b))&0xFF);
+						std::cout << " ";
+					}
+					std::cout << std::endl;
+						
+					computeQtp1(21); // m10 => Q22 already checked
+					computeQtp1(22); // m15 => Q23 already checked
+					
+					computeQtp1(23); // m4 => Q24
+					if (!masked_value_QtQtm1(24).check(Qt(24)))
+						continue;
+					if (!checkrotationQtQtp1(23))
+						continue;
+					std::cout << "Q24 satisfied!" << std::endl;
+				}
+				}
+			}
+		}
+		std::cout << "m4:" << m4attempts << ", Q7success:" << Q7success << std::endl;
+	}
+	exit(0);
+}
+
+void collisionfinding_alphabet_thread::do_step16_statistics()
+{
+	static const uint64_t N = 1ULL<<20;
+	vector< array<uint32_t, 32> > in, out;
+	in.reserve(N);
+	out.reserve(N);
+	
+	std::cout << "Generate Q13-Q16:";
+	progress_display genpd(N);
+	out.resize(N);
+	for (size_t i = 0; i < N; ++i,++genpd)
+	{
+		Qt(13) = masked_value_Qt(13).sample();
+		Qt(14) = masked_value_QtQtm1(14).sample();
+		Qt(15) = masked_value_QtQtm1(15).sample();
+		Qt(16) = masked_value_QtQtm1(16).sample();
+
+		auto& cur = out[i];
+		for (int t = 13; t <= 16; ++t)
+			cur[offset+t] = Q[offset+t];
+	}
+
+	for (int t = 15; t >= 0; --t)
+	{
+		std::swap(in, out);
+		out.clear(); out.reserve(N);
+		std::cout << "\n=======\nStep " << t << ":";
+		progress_display pd(N);
+		uint64_t attempts = 0;
+		while (out.size() < N)
+		{
+			out.emplace_back(); ++pd;
+			auto& cur = out.back();
+			while (true)
+			{
+				++attempts;
+				// sample random input value
+				auto& incur = in[ xrng64() % in.size() ];
+				// copy just the Q values needed for step t
+				for (unsigned i = offset+t-3; i <= offset+t+1; ++i)
+					Q[i] = incur[i];
+				auto Qtm3mv = masked_value_QtQtp1(t-3);
+				auto mtrange = MA.word_range(t);
+				if (Qtm3mv.count() < mtrange.count())
+				{
+					Qt(t-3) = Qtm3mv.sample();
+					computeWt(t);
+					if (!MA.checkword(t, m[t]))
+						continue;
+				} else {
+					m[t] = MA.sampleword(t);
+					computeQtm3(t);
+					if (!Qtm3mv.check(Qt(t-3)))
+						continue;
+				}
+				// found solution
+				cur = incur;
+				cur[offset+t-3] = Qt(t-3);
+				break;
+			}
+		}
+		std::cout << "Step " << t << ": attempts: 2^" << log(double(attempts))/log(2.0) << " success rate: 2^" << log(double(N)/double(attempts))/log(2.0) << std::endl;
+	}
+	for (int t = 16; t < 26; ++t)
+	{
+		std::swap(in, out);
+		out.clear(); out.reserve(N);
+		std::cout << "\n=======\nStep " << t << ":";
+		progress_display pd(N);
+		uint64_t attempts = 0;
+		while (out.size() < N)
+		{
+			out.emplace_back(); ++pd;
+			auto& cur = out.back();
+			while (true)
+			{
+				++attempts;
+				// sample random input value
+				auto& incur = in[ xrng64() % in.size() ];
+				// copy just the Q values needed for step t
+				for (unsigned i = offset+t-3; i <= offset+t+1; ++i)
+					Q[i] = incur[i];
+				auto Qtp1mv = masked_value_QtQtm1(t+1);
+				int wt = md5_wt[t];
+				auto mtrange = MA.word_range(wt);
+				if (Qtp1mv.count() < mtrange.count())
+				{
+					Qt(t+1) = Qtp1mv.sample();
+					computeWt(t);
+					if (!MA.checkword(wt, m[wt]))
+						continue;
+				} else {
+					m[wt] = MA.sampleword(wt);
+					computeQtp1(t);
+					if (!Qtp1mv.check(Qt(t+1)))
+						continue;
+				}
+				// found solution
+				cur = incur;
+				cur[offset+t+1] = Qt(t+1);
+				break;
+			}
+		}
+		std::cout << "Step " << t << ": attempts: 2^" << log(double(attempts))/log(2.0) << " success rate: 2^" << log(double(N)/double(attempts))/log(2.0) << std::endl;
+	}
+	differentialpath diffpath2 = diffpath;
+	for (int t = 1; t <= 26; ++t)
+	{
+		for (unsigned b = 0; b < 32; ++b)
+		{
+			if (Qvaluemask[offset+t]&(1<<b))
+				continue;
+			uint64_t count1 = 0, countnprev = 0;
+			for (size_t i = 0; i < N; ++i)
+			{
+				if (out[i][offset+t] & (uint32_t(1)<<b))
+					++count1;
+				if ((out[i][offset+t]^out[i][offset+t-1]) & (uint32_t(1)<<b))
+					++countnprev;
+			}
+			double C1F = double(count1)/double(N);
+			double CNPF = double(countnprev)/double(N);
+			if (CNPF < 0.3 || CNPF > 0.7)
+			{
+				std::cout << "Q" << t << "[" << b << "] = ! with prob " << CNPF << std::endl;
+				if (CNPF < 0.5)
+					diffpath2.setbitcondition(t,b,bc_prev);
+				else
+					diffpath2.setbitcondition(t,b,bc_prevn);
+			}
+			if (C1F < 0.3 || C1F > 0.7)
+			{
+				std::cout << "Q" << t << "[" << b << "] = 1 with prob " << C1F << std::endl;
+				if (C1F < 0.5)
+					diffpath2.setbitcondition(t,b,bc_zero);
+				else
+					diffpath2.setbitcondition(t,b,bc_one);
+			}
+		}
+	}
+	show_path(diffpath2, m_diff);
+	std::map<uint8_t,size_t> byte_set[4];
+	for (int t = 0; t < 26; ++t)
+	{
+		int wt = md5_wt[t];
+		for (unsigned b = 0; b < 4; ++b)
+			byte_set[b].clear();
+		for (size_t i = 0; i < N; ++i)
+		{
+			for (unsigned j = offset+t-3; j <= offset+t+1; ++j)
+				Q[j] = out[i][j];
+			computeWt(t);
+			uint32_t Wt = m[wt];
+			for (unsigned b = 0; b < 4; ++b)
+				++ byte_set[b][ uint8_t((Wt>>(b*8))&0xFF) ];
+		}
+		for (unsigned b = 0; b < 4; ++b)
+		{
+			std::cout << "Byte " << (4*wt+b) << ": ";
+			for (auto& cc : byte_set[b])
+				if (cc.second >= N/256)
+					std::cout << char(cc.first);
+			std::cout << std::endl;
+		}
+	}
+}
+
+void collisionfinding_alphabet_thread::do_step16_old()
+{
+	std::cout << "0" << std::flush;
+
+	uint64 loopcount0 = 0, loopcount1 = 0, loopcount2 = 0;
+	while (true)
+	{
+		++loopcount0;
+		// sample Q13-Q16,m1
+		Qt(13) = masked_value_Qt(13).sample();
+		Qt(14) = masked_value_QtQtm1(14).sample();
+		Qt(15) = masked_value_QtQtm1(15).sample();
+		Qt(16) = masked_value_QtQtm1(16).sample();
+
+		m[1] = MA.sampleword(1);
+		// check Q17
+		computeQtp1(16);
+		if (!masked_value_QtQtm1(17).check(Qt(17)))
+			continue;
+
+		if (!checkrotationQtQtp1(13) || !checkrotationQtQtp1(14) || !checkrotationQtQtp1(15) || !checkrotationQtQtp1(16)) continue;
+
+		// iterate over valid Q12 until valid m15
+		if (++loopcount1 == 1) std::cout << "Q17 " << std::flush;
+
+		auto Q12mv = masked_value_QtQtp1(12);
+		for (uint32_t Q12cur : Q12mv.range_rnd())
+		{
+			Qt(12) = Q12cur;
+			if (!checkrotationQtQtp1(12))
+				continue;
+			computeWt(15);
+			if (MA.checkword(15, m[15]))
+				break;
+		}
+		if (!MA.checkword(15, m[15]))
+			continue;
+		if (++loopcount2 == 1) std::cout << "Q12 " << std::flush;
+		
+		static const unsigned minQ9m9tunnels = 12;
+		// generate table of valid (m14,Q11) solutions with hw(Q11 & ~Q9valuemask) >= minQ9m9tunnel
+		m14Q11.clear();
+		uint32_t Q9m9tunnel = ~Qtvaluemask(9);
+		auto Q11mv = masked_value_QtQtp1(11);
+		// ensure at least minQ9m9tunnels number of 1-bits
+		for (uint32_t Q11cur : bit_mask_minweight_range(~Q11mv.mask, minQ9m9tunnels))
+		{
+			Qt(11) = Q11cur ^ Q11mv.value;
+			if (!checkrotationQtQtp1(11))
+				continue;
+			computeWt(14);
+			if (!MA.checkword(14, m[14]))
+				continue;
+			if (hammingweight(Qt(11) & Q9m9tunnel) < minQ9m9tunnels)
+				continue;
+			m14Q11.emplace_back(m[14], Qt(11));
+		};
+		if (m14Q11.empty())
+			continue;
+		// sort (m14,Q11) solutions on decending number of 1-bits of Q11 to maximize Q9m9 tunnel
+		std::sort(m14Q11.begin(), m14Q11.end(), [Q9m9tunnel](auto& l, auto& r) { return hw(l.second & Q9m9tunnel) > hw(r.second & Q9m9tunnel); });
+		std::cout << " Q11hw:" << hw(m14Q11.front().second) << std::flush;
+
+		m14m13.clear();
+		for (auto&& mQ : m14Q11)
+		{
+//			if (m14m13.size() > (1<<16))
+//				break;
+			m[14] = mQ.first;
+			Qt(11) = mQ.second;
+			uint32_t Q9m9tunnel2 = Q9m9tunnel & Qt(11);
+			if (hw(Q9m9tunnel2) < minQ9m9tunnels)
+				continue;
+			auto Q10mv = masked_value_QtQtp1(10);
+			uint32_t Q10tunnelmask = ~Q10mv.mask & Q9m9tunnel2;
+			// ensure at least minQ9m9tunnels number of 1-bits under Q10tunnelmask
+			for (uint32_t Q10curneg : bit_mask_minweight_range(Q10tunnelmask, minQ9m9tunnels))
+			{
+				// flip bits as for Q9m9 tunnel the Q10 bits actually need to be 0
+				uint32_t Q10cur = ~Q10curneg & Q10tunnelmask;
+				for (uint32_t Q10cur2 : bit_mask_range(~Q10mv.mask & ~Q9m9tunnel2))
+				{
+					Qt(10) = Q10cur ^ Q10cur2 ^ Q10mv.value;
+					computeWt(13);
+					if (!MA.checkword(13, m[13]))
+						continue;
+					m14m13.emplace_back(m[14],m[13]);
+				}
+			}
+		}
+		if (m14m13.empty())
+			continue;
+		const unsigned Q789conds = hammingweight(masked_value_QtQtp1(9).mask) + hammingweight(masked_value_QtQtp1(8).mask) + hammingweight(masked_value_QtQtp1(7).mask);
+		uint64_t expectedQ789sols = (uint64_t(m14m13.size()) * uint64_t(MA.word_size[12])) >> Q789conds;
+		
+
+		testcounts[0] += loopcount0;
+		testcounts[100] = std::max<uint64>(loopcount0, testcounts[100]);
+		testcounts[1] += loopcount1;
+		testcounts[101] = std::max<uint64>(loopcount1, testcounts[101]);
+		std::cout << "\nQ12-Q17,m1,m15 (l0:" << loopcount0 << ", l1:" << loopcount1 << ", m14m13:" << m14m13.size() << ", E|Q789|:" << expectedQ789sols << ")" << std::endl;
+		if (expectedQ789sols >= Q7m12m13m14size)
+			std::cout << "D" << std::endl;
+		else
+			continue;
+		do_step17();
+		break;
+	}
+}
+
+void collisionfinding_alphabet_thread::filltables()
+{
+	isinfinite = true;
+	for (int t = -3; t <= 64; ++t)
+	{
+		dQ[offset+t] = dT[offset+t] = dR[offset+t] = 0;
+		Qvaluemask[offset+t] = Qvalue[offset+t] = 0;
+		Qprev[offset+t] = Qprev2[offset+t] = 0;
+	}
+	Q5m5tunnel=0; Q4m5tunnel=0; Q4m4tunnel=0;
+	Q10m10tunnel=0; Q9m10tunnel=0; Q9m9tunnel=0;
+	Q8Q12m15tunnel=0; Q14m6Q3m5tunnel=0; Q14Q3m14tunnel=0;
+
+	// build tables
+	for (int t = diffpath.tbegin(); t < diffpath.tend(); ++t)
+	{
+		dQ[offset+t] = diffpath[t].diff();
+		Qprev[offset+t] = diffpath[t].prev() | diffpath[t].prevn();
+		Qprev2[offset+t] = diffpath[t].prev2() | diffpath[t].prev2n();
+		Qvaluemask[offset+t] = (~diffpath[t].set0()) | diffpath[t].set1()
+							| diffpath[t].prev() | diffpath[t].prevn()
+							| diffpath[t].prev2() | diffpath[t].prev2n();
+		Qvalue[offset+t] = diffpath[t].set1() | diffpath[t].prevn() | diffpath[t].prev2n();
+	}
+	for (int t = 0; t < 64; ++t)
+	{
+		booleanfunction* F = 0;
+		if (t < 16) F = & MD5_F_data;
+		else if (t < 32) F = & MD5_G_data;
+		else if (t < 48) F = & MD5_H_data;
+		else F = & MD5_I_data;
+		uint32 dF = 0;
+		for (unsigned b = 0; b < 32; ++b)
+		{
+			bf_outcome outcome = F->outcome(diffpath(t,b), diffpath(t-1,b), diffpath(t-2,b));
+			if (outcome.size()) {
+				if (outcome[0] == bc_plus) 			dF += 1<<b;
+				else if (outcome[0] == bc_minus)	dF -= 1<<b;
+			} else throw std::runtime_error("ambiguous path!!");
+		}
+		dT[offset+t] = dQ[offset+t-3] + dF + m_diff[md5_wt[t]];
+		dR[offset+t] = dQ[offset+t+1] - dQ[offset+t];
+	}
+
+	Q[0] = Qvalue[0]; Q2[0] = Q[0] + dQ[0];
+	Q[1] = Qvalue[1]; Q2[1] = Q[1] + dQ[1];
+	Q[2] = Qvalue[2]; Q2[2] = Q[2] + dQ[2];
+	Q[3] = Qvalue[3]; Q2[3] = Q[3] + dQ[3];
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 struct collfind_thread {
@@ -1233,11 +2389,90 @@ void collfind_threaded(const vector<differentialpath>& paths, parameters_type& p
 }
 
 
+struct collfind_alphabet_thread {
+	collfind_alphabet_thread(const vector<differentialpath>& paths, parameters_type& params)
+		: diffpaths(paths), parameters(params)
+	{}
+	const vector<differentialpath>& diffpaths;
+	const parameters_type& parameters;
+	collisionfinding_alphabet_thread worker;
+	void operator()() {
+		try {
+			for (unsigned i = 0; i < 16; ++i)
+				worker.m_diff[i] = parameters.m_diff[i];
+
+#ifdef CPUPERFORMANCE
+			for (unsigned t = 0; t < 64; ++t)
+				worker.cpu_step_t[t] = 0;
+			performance_counter_manager counter_man;
+			counter_man.add_performance_counter(worker.cpu_step_t[16], "Step t=16");
+			counter_man.add_performance_counter(worker.cpu_step_t[17], "Step t=17");
+			counter_man.add_performance_counter(worker.cpu_step_t[18], "Step t=18");
+			counter_man.add_performance_counter(worker.cpu_step_t[19], "Step t=19");
+			counter_man.add_performance_counter(worker.cpu_step_t[20], "Step t=20");
+			counter_man.add_performance_counter(worker.cpu_step_t[21], "Step t=21");
+			counter_man.add_performance_counter(worker.cpu_step_t[22], "Step t=22");
+			counter_man.add_performance_counter(worker.cpu_step_t[23], "Step t=23");
+			counter_man.add_performance_counter(worker.cpu_step_t[24], "Step t=24");
+			counter_man.add_performance_counter(worker.cpu_step_t[25], "Step t=25");
+#endif
+			timer sw(true);
+			try {
+				while (true) {
+					worker.findcollision(diffpaths, parameters.alphabet);
+					if (sw.time() > 300) {
+						sw.start();
+#ifdef CPUPERFORMANCE
+						for (unsigned t = 0; t+1 < 64; ++t)
+							worker.cpu_step_t[t] -= worker.cpu_step_t[t+1];
+						counter_man.show_results();
+						for (unsigned t = 62; t > 0; --t)
+							worker.cpu_step_t[t] += worker.cpu_step_t[t+1];
+#endif
+						mut.lock();
+						for (unsigned i = 0; i < worker.testcounts.size(); ++i)
+							if (worker.testcounts[i])
+								cout << i << ":\t" << worker.testcounts[i] << endl;
+						mut.unlock();
+					}
+				}
+			} catch (...) {
+#ifdef CPUPERFORMANCE
+				for (unsigned t = 0; t+1 < 64; ++t)
+					worker.cpu_step_t[t] -= worker.cpu_step_t[t+1];
+				counter_man.show_results();
+#endif
+				throw;
+			}
+		} catch (std::exception & e) { cerr << "Worker thread: caught exception:" << endl << e.what() << endl; } catch (...) {}
+	}
+};
+void collfind_alphabet_threaded(const vector<differentialpath>& paths, parameters_type& parameters)
+{
+	collfind_alphabet_thread mythread(paths, parameters);
+	mythread();
+	return;
+	boost::thread_group mythreads;
+	for (unsigned i = 0; i < parameters.threads; ++i)
+		mythreads.create_thread(collfind_alphabet_thread(paths, parameters));
+	mythreads.join_all();
+}
+
+uint32 testtest(uint32 mask, uint32 value)
+{
+	uint32 y = 0;
+	for (auto&& x : bit_mask_range(mask))
+	{
+		y += (x ^ value);
+	}
+	return y;
+}
+
 int collisionfinding(parameters_type& parameters)
 {
+
+
 	parameters.show_mdiffs();
-//	for (unsigned i = 0; i < 16; ++i)
-//		m_diff[i] = parameters.m_diff[i];
 
 	differentialpath diffpath;
 	vector<differentialpath> vecpath;
@@ -1262,15 +2497,10 @@ int collisionfinding(parameters_type& parameters)
 	show_path(vecpath[0], parameters.m_diff);
 	cout << "Starting..." << endl;
 
-	collfind_threaded(vecpath, parameters);
-//	collisionfinding_thread worker;
-//	for (unsigned i = 0; i < 16; ++i)
-//		worker.m_diff[i] = parameters.m_diff[i];
-//	worker.diffpath = diffpath;
-//	worker.filltables();
-//	while (true) {
-//		worker.do_step16();
-//	}
+	if (parameters.alphabet.empty())
+		collfind_threaded(vecpath, parameters);
+	else
+		collfind_alphabet_threaded(vecpath, parameters);
 	return 0;
 }
 
