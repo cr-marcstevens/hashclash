@@ -72,6 +72,7 @@ bin_md5_diffpathconnect_SOURCES=\
 
 bin_md5_diffpathhelper_SOURCES=\
 	src/md5helper/collisionfinding.cpp \
+	src/md5helper/textcoll.cpp \
 	src/md5helper/convert.cpp \
 	src/md5helper/main.cpp \
 	src/md5helper/main.hpp \

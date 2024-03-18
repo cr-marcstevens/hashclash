@@ -72,6 +72,7 @@ int main(int argc, char** argv)
 			("upperpaths",			"Write all partial upper diff. paths\n")
 			("findcollision",		"Find nearcollision using path\n"
 									"   given by inputfile1\n")
+			("findtextcollision",	"Find nearcollision using special path and alphabet\n")
 			("convert",				"Convert files between binary and text\n")
 			("split", po::value<unsigned>(&parameters.split),
 									"Split inputfile1 in given # files\n")
@@ -157,6 +158,7 @@ int main(int argc, char** argv)
 					+vm.count("upperpaths")
 					+vm.count("enhancepath")
 					+vm.count("findcollision")
+					+vm.count("findtextcollision")
 					+vm.count("convert")
 					+vm.count("split")
 					+vm.count("join")
@@ -187,6 +189,8 @@ int main(int argc, char** argv)
 			return upperpaths(parameters);
 		if (vm.count("findcollision"))
 			return collisionfinding(parameters);
+		if (vm.count("findtextcollision"))
+			return textcoll(parameters);
 		if (vm.count("convert"))
 			return convert(parameters);
 		if (vm.count("split"))
