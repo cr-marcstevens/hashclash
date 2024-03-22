@@ -112,6 +112,13 @@ void textcoll_solver_t::completeQ7Q24(const halfstate_t& Q7Q24state)
 			throw std::runtime_error("Q7Q24state: Wt alphabet violation");
 	}
 
+	std::cout << "MSG: ";
+	for (unsigned t = 0; t < 16; ++t)
+		for (unsigned b = 0; b < 4; ++b)
+			std::cout << char( (S.m[t]>>(b*8))&0xFF);
+	std::cout << std::endl;
+
+
 	// iterate over all m4 values in random order
 	if (m4rndrange.empty())
 	{
@@ -227,7 +234,7 @@ void textcoll_solver_t::completeQ7Q24(const halfstate_t& Q7Q24state)
 							if (itf.second && hammingweight(uint64_t(Q7810m1213.size()))==1) std::cout << Q7810m1213.size() << " " << std::flush;
 
 						}
-						if (Q7810m1213.size() >= 1ULL<<19)
+						if (Q7810m1213.size() >= 1ULL<<21)
 							stop = true;
 					}
 					// finished writing, increase write ptr for next thread
