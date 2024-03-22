@@ -32,7 +32,7 @@ $TEXTCOLL $MDIFF $FIRSTBLOCKBYTES --prepare --pathfile textcoll_path.bin.gz --al
 
 $TEXTCOLL $MDIFF $FIRSTBLOCKBYTES --firstblock --pathfile textcoll_path.bin.gz --alphabet $ALPHABET --prefixfile ${prefixfile} || exit 1
 
-collfile=`ls textcoll1_*.txt | head -n`
+collfile=`ls textcoll1_*.txt | head -n1`
 
 cat ${prefixfile} ${collfile} > partial_solution.txt
 
