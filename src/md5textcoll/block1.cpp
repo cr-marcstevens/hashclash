@@ -224,7 +224,7 @@ void textcoll_solver_t::completeQ7Q24(const halfstate_t& Q7Q24state)
 						for (auto& kv : tmp)
 						{
 							auto itf = Q7810m1213.insert(kv);
-							if (itf.second && hammingweight(Q7810m1213.size())==1) std::cout << Q7810m1213.size() << " " << std::flush;
+							if (itf.second && hammingweight(uint64_t(Q7810m1213.size()))==1) std::cout << Q7810m1213.size() << " " << std::flush;
 
 						}
 						if (Q7810m1213.size() >= 1ULL<<19)

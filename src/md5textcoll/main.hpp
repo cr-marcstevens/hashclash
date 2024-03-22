@@ -65,8 +65,6 @@ struct parameters_type {
 int textcoll_block1(parameters_type& parameters);
 int textcoll_block2(parameters_type& parameters);
 
-
-
 static inline size_t hammingweight(uint32_t x) { return __builtin_popcountl(x); }
 static inline size_t hammingweight(uint64_t x) { return __builtin_popcountll(x); }
 
