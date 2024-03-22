@@ -124,7 +124,11 @@ void textcoll_solver_t::prepare_block1()
 				++charcount[ char((S.m[wt]>>(8*b))&0xFF) ];
 			std::cout << "m" << wt << "[" << b << "]=msg[" << (wt*4+b) << "]: ";
 			std::vector< std::pair<char,size_t> > charcountsorted(charcount.begin(), charcount.end());
-			std::sort(charcountsorted.begin(), charcountsorted.end(), [](auto& l, auto& r){ return l.second > r.second; });
+			std::sort(charcountsorted.begin(), charcountsorted.end(), 
+				[](const std::pair<char,size_t>& l, const std::pair<char,size_t>& r)
+				{
+					return l.second > r.second; 
+				});
 			for (auto& cc : charcountsorted)
 				std::cout << cc.first;
 			std::cout << std::endl;

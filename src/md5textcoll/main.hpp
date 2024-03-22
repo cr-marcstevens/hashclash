@@ -129,8 +129,8 @@ struct localxrng {
 	localxrng()
 	{
 		std::random_device rd;
-		x = uint64_t(rd()) + uint64_t(rd())<<32;
-		y = uint64_t(rd()) + uint64_t(rd())<<32;
+		x = uint64_t(rd()) + (uint64_t(rd())<<32);
+		y = uint64_t(rd()) + (uint64_t(rd())<<32);
 		x |= 1;
 	}
 	
