@@ -566,8 +566,8 @@ void textcoll_solver_t::check_solution(const fullstate_t& sol)
 		
 	std::cout << " ====== FULL SOLUTION FOUND =====" << std::endl;
         uint32 x = xrng128();
-        std::string filename1 = "textcoll1_" + boost::lexical_cast<string>(x) + ".txt";
-        std::string filename2 = "textcoll2_" + boost::lexical_cast<string>(x) + ".txt";
+        std::string filename1 = "textcoll1_block1_" + boost::lexical_cast<string>(x) + ".txt";
+        std::string filename2 = "textcoll2_block1_" + boost::lexical_cast<string>(x) + ".txt";
         std::cout << "Saving to " << filename1 << " & " << filename2 << "." << std::endl;
         ofstream of1(filename1.c_str(), ios::binary);
         ofstream of2(filename2.c_str(), ios::binary);
