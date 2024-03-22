@@ -26,6 +26,7 @@ lib_libhashclash_la_LDFLAGS=-no-undefined
 
 bin_PROGRAMS=\
 	bin/md5_fastcoll \
+	bin/md5_textcoll \
 	bin/md5_diffpathforward \
 	bin/md5_diffpathbackward \
 	bin/md5_diffpathconnect \
@@ -51,6 +52,13 @@ bin_md5_fastcoll_SOURCES=\
 	src/md5fastcoll/block1stevens01.cpp \
 	src/md5fastcoll/block1stevens10.cpp \
 	src/md5fastcoll/block1stevens11.cpp
+
+bin_md5_textcoll_SOURCES=\
+	src/md5textcoll/main.cpp \
+	src/md5textcoll/main.hpp \
+	src/md5textcoll/prepareblock1.cpp \
+	src/md5textcoll/block1.cpp \
+	src/md5textcoll/block2.cpp
 
 bin_md5_diffpathforward_SOURCES=\
 	src/md5forward/dostep.cpp \
