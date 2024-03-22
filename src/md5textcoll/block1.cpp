@@ -329,7 +329,11 @@ void textcoll_solver_t::completeQ7Q24(const halfstate_t& Q7Q24state)
 			});
 		std::cout << "Converting into look-up table..." << std::flush;
 
-		std::sort(vecQ7m10m12m13.begin(), vecQ7m10m12m13.end(), [](auto& l, auto& r) { return l[0] < r[0]; });
+		std::sort(vecQ7m10m12m13.begin(), vecQ7m10m12m13.end(), 
+			[](const std::array<uint32_t,4>& l, const std::array<uint32_t,4>& r)
+			{
+				return l[0] < r[0];
+			});
 		for (size_t i = 0; i < vecQ7m10m12m13.size(); )
 		{
 			Q7ptr[ vecQ7m10m12m13[i][0] ] = i;
