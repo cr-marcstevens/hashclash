@@ -50,13 +50,15 @@ int main(int argc, char** argv)
 
 	try {
 		parameters_type parameters;
+		parameters.byte_alphabet = vector<string>(64, "");
 		vector< vector<int> > msgdiff(16);
 				
 		// Define program options
 		po::options_description 
 			cmds("Allowed commands"),
 			desc("Allowed options"), 
-			msg("Define message differences (as +bitnr and -bitnr, bitnr=1-32)"), 
+			msg("Define message differences (as +bitnr and -bitnr, bitnr=1-32)"),
+			bba("Byte-specific alphabets"),
 			all("Allowed options");
 
 		cmds.add_options()
@@ -101,7 +103,73 @@ int main(int argc, char** argv)
 			("diffm14", po::value< vector<int> >(&msgdiff[14]), "delta m14")
 			("diffm15", po::value< vector<int> >(&msgdiff[15]), "delta m15")
 			;
-		all.add(cmds).add(desc).add(msg);
+		bba.add_options()
+			("byte0", po::value<string>(&parameters.byte_alphabet[0])->default_value(""), "Byte 0 alphabet (empty=use global alphabet)")
+			("byte1", po::value<string>(&parameters.byte_alphabet[1])->default_value(""), "Byte 1 alphabet (empty=use global alphabet)")
+			("byte2", po::value<string>(&parameters.byte_alphabet[2])->default_value(""), "Byte 2 alphabet (empty=use global alphabet)")
+			("byte3", po::value<string>(&parameters.byte_alphabet[3])->default_value(""), "Byte 3 alphabet (empty=use global alphabet)")
+			("byte4", po::value<string>(&parameters.byte_alphabet[4])->default_value(""), "Byte 4 alphabet (empty=use global alphabet)")
+			("byte5", po::value<string>(&parameters.byte_alphabet[5])->default_value(""), "Byte 5 alphabet (empty=use global alphabet)")
+			("byte6", po::value<string>(&parameters.byte_alphabet[6])->default_value(""), "Byte 6 alphabet (empty=use global alphabet)")
+			("byte7", po::value<string>(&parameters.byte_alphabet[7])->default_value(""), "Byte 7 alphabet (empty=use global alphabet)")
+			("byte8", po::value<string>(&parameters.byte_alphabet[8])->default_value(""), "Byte 8 alphabet (empty=use global alphabet)")
+			("byte9", po::value<string>(&parameters.byte_alphabet[9])->default_value(""), "Byte 9 alphabet (empty=use global alphabet)")
+			("byte10", po::value<string>(&parameters.byte_alphabet[10])->default_value(""), "Byte 10 alphabet (empty=use global alphabet)")
+			("byte11", po::value<string>(&parameters.byte_alphabet[11])->default_value(""), "Byte 11 alphabet (empty=use global alphabet)")
+			("byte12", po::value<string>(&parameters.byte_alphabet[12])->default_value(""), "Byte 12 alphabet (empty=use global alphabet)")
+			("byte13", po::value<string>(&parameters.byte_alphabet[13])->default_value(""), "Byte 13 alphabet (empty=use global alphabet)")
+			("byte14", po::value<string>(&parameters.byte_alphabet[14])->default_value(""), "Byte 14 alphabet (empty=use global alphabet)")
+			("byte15", po::value<string>(&parameters.byte_alphabet[15])->default_value(""), "Byte 15 alphabet (empty=use global alphabet)")
+			("byte16", po::value<string>(&parameters.byte_alphabet[16])->default_value(""), "Byte 16 alphabet (empty=use global alphabet)")
+			("byte17", po::value<string>(&parameters.byte_alphabet[17])->default_value(""), "Byte 17 alphabet (empty=use global alphabet)")
+			("byte18", po::value<string>(&parameters.byte_alphabet[18])->default_value(""), "Byte 18 alphabet (empty=use global alphabet)")
+			("byte19", po::value<string>(&parameters.byte_alphabet[19])->default_value(""), "Byte 19 alphabet (empty=use global alphabet)")
+			("byte20", po::value<string>(&parameters.byte_alphabet[20])->default_value(""), "Byte 20 alphabet (empty=use global alphabet)")
+			("byte21", po::value<string>(&parameters.byte_alphabet[21])->default_value(""), "Byte 21 alphabet (empty=use global alphabet)")
+			("byte22", po::value<string>(&parameters.byte_alphabet[22])->default_value(""), "Byte 22 alphabet (empty=use global alphabet)")
+			("byte23", po::value<string>(&parameters.byte_alphabet[23])->default_value(""), "Byte 23 alphabet (empty=use global alphabet)")
+			("byte24", po::value<string>(&parameters.byte_alphabet[24])->default_value(""), "Byte 24 alphabet (empty=use global alphabet)")
+			("byte25", po::value<string>(&parameters.byte_alphabet[25])->default_value(""), "Byte 25 alphabet (empty=use global alphabet)")
+			("byte26", po::value<string>(&parameters.byte_alphabet[26])->default_value(""), "Byte 26 alphabet (empty=use global alphabet)")
+			("byte27", po::value<string>(&parameters.byte_alphabet[27])->default_value(""), "Byte 27 alphabet (empty=use global alphabet)")
+			("byte28", po::value<string>(&parameters.byte_alphabet[28])->default_value(""), "Byte 28 alphabet (empty=use global alphabet)")
+			("byte29", po::value<string>(&parameters.byte_alphabet[29])->default_value(""), "Byte 29 alphabet (empty=use global alphabet)")
+			("byte30", po::value<string>(&parameters.byte_alphabet[30])->default_value(""), "Byte 30 alphabet (empty=use global alphabet)")
+			("byte31", po::value<string>(&parameters.byte_alphabet[31])->default_value(""), "Byte 31 alphabet (empty=use global alphabet)")
+			("byte32", po::value<string>(&parameters.byte_alphabet[32])->default_value(""), "Byte 32 alphabet (empty=use global alphabet)")
+			("byte33", po::value<string>(&parameters.byte_alphabet[33])->default_value(""), "Byte 33 alphabet (empty=use global alphabet)")
+			("byte34", po::value<string>(&parameters.byte_alphabet[34])->default_value(""), "Byte 34 alphabet (empty=use global alphabet)")
+			("byte35", po::value<string>(&parameters.byte_alphabet[35])->default_value(""), "Byte 35 alphabet (empty=use global alphabet)")
+			("byte36", po::value<string>(&parameters.byte_alphabet[36])->default_value(""), "Byte 36 alphabet (empty=use global alphabet)")
+			("byte37", po::value<string>(&parameters.byte_alphabet[37])->default_value(""), "Byte 37 alphabet (empty=use global alphabet)")
+			("byte38", po::value<string>(&parameters.byte_alphabet[38])->default_value(""), "Byte 38 alphabet (empty=use global alphabet)")
+			("byte39", po::value<string>(&parameters.byte_alphabet[39])->default_value(""), "Byte 39 alphabet (empty=use global alphabet)")
+			("byte40", po::value<string>(&parameters.byte_alphabet[40])->default_value(""), "Byte 40 alphabet (empty=use global alphabet)")
+			("byte41", po::value<string>(&parameters.byte_alphabet[41])->default_value(""), "Byte 41 alphabet (empty=use global alphabet)")
+			("byte42", po::value<string>(&parameters.byte_alphabet[42])->default_value(""), "Byte 42 alphabet (empty=use global alphabet)")
+			("byte43", po::value<string>(&parameters.byte_alphabet[43])->default_value(""), "Byte 43 alphabet (empty=use global alphabet)")
+			("byte44", po::value<string>(&parameters.byte_alphabet[44])->default_value(""), "Byte 44 alphabet (empty=use global alphabet)")
+			("byte45", po::value<string>(&parameters.byte_alphabet[45])->default_value(""), "Byte 45 alphabet (empty=use global alphabet)")
+			("byte46", po::value<string>(&parameters.byte_alphabet[46])->default_value(""), "Byte 46 alphabet (empty=use global alphabet)")
+			("byte47", po::value<string>(&parameters.byte_alphabet[47])->default_value(""), "Byte 47 alphabet (empty=use global alphabet)")
+			("byte48", po::value<string>(&parameters.byte_alphabet[48])->default_value(""), "Byte 48 alphabet (empty=use global alphabet)")
+			("byte49", po::value<string>(&parameters.byte_alphabet[49])->default_value(""), "Byte 49 alphabet (empty=use global alphabet)")
+			("byte50", po::value<string>(&parameters.byte_alphabet[50])->default_value(""), "Byte 50 alphabet (empty=use global alphabet)")
+			("byte51", po::value<string>(&parameters.byte_alphabet[51])->default_value(""), "Byte 51 alphabet (empty=use global alphabet)")
+			("byte52", po::value<string>(&parameters.byte_alphabet[52])->default_value(""), "Byte 52 alphabet (empty=use global alphabet)")
+			("byte53", po::value<string>(&parameters.byte_alphabet[53])->default_value(""), "Byte 53 alphabet (empty=use global alphabet)")
+			("byte54", po::value<string>(&parameters.byte_alphabet[54])->default_value(""), "Byte 54 alphabet (empty=use global alphabet)")
+			("byte55", po::value<string>(&parameters.byte_alphabet[55])->default_value(""), "Byte 55 alphabet (empty=use global alphabet)")
+			("byte56", po::value<string>(&parameters.byte_alphabet[56])->default_value(""), "Byte 56 alphabet (empty=use global alphabet)")
+			("byte57", po::value<string>(&parameters.byte_alphabet[57])->default_value(""), "Byte 57 alphabet (empty=use global alphabet)")
+			("byte58", po::value<string>(&parameters.byte_alphabet[58])->default_value(""), "Byte 58 alphabet (empty=use global alphabet)")
+			("byte59", po::value<string>(&parameters.byte_alphabet[59])->default_value(""), "Byte 59 alphabet (empty=use global alphabet)")
+			("byte60", po::value<string>(&parameters.byte_alphabet[60])->default_value(""), "Byte 60 alphabet (empty=use global alphabet)")
+			("byte61", po::value<string>(&parameters.byte_alphabet[61])->default_value(""), "Byte 61 alphabet (empty=use global alphabet)")
+			("byte62", po::value<string>(&parameters.byte_alphabet[62])->default_value(""), "Byte 62 alphabet (empty=use global alphabet)")
+			("byte63", po::value<string>(&parameters.byte_alphabet[63])->default_value(""), "Byte 63 alphabet (empty=use global alphabet)")
+			;
+		all.add(cmds).add(desc).add(msg).add(bba);
 	
 		// Parse program options
 		po::positional_options_description p;
