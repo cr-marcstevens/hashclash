@@ -225,9 +225,11 @@ void textcoll_solver_t::start_block2()
 
 		*/	
 			int t = 0;
-			for (; t < 15; ++t)
+			for (; t < 13; ++t)
 			{
-				while (true) //for (uint32_t mt : words)
+				if (t < 0)
+					continue;
+				for (int i = 0; i < 16; ++i) //while (true) //for (uint32_t mt : words)
 				{
 					S1.m[t] = //mt; //words[xrng64() % words.size()];
 					MA.sampleword(t);
@@ -235,11 +237,11 @@ void textcoll_solver_t::start_block2()
 					if ( (S1.Qt(t+1)>>31) == (S1.Qt(t)>>31) )
 						break;
 				}
-/*				if ( (S1.Qt(t+1)>>31) != (S1.Qt(t)>>31) )
+				if ( (S1.Qt(t+1)>>31) != (S1.Qt(t)>>31) )
 				{
-					t -= 2; continue;
+					t -= 4; continue;
 					break;
-				}*/
+				}
 			}
 //			if (t < 12) continue;
 
@@ -283,28 +285,29 @@ void textcoll_solver_t::start_block2()
 			for (uint32_t m12 : words)//MA.word_range(13))
 			{
 				S1.m[12] = m12; S1.computeQtp1(12); if ( (S1.Qt(13)>>31) != (S1.Qt(0)>>31) ) continue;
-			for (uint32_t m13 : words)//MA.word_range(13))
+*/
+			for (uint32_t m13 : MA.word_range(13))
 			{
 				S1.m[13] = m13; S1.computeQtp1(13); if ( (S1.Qt(14)>>31) != (S1.Qt(0)>>31) ) continue;
-			for (uint32_t m14 : words)//MA.word_range(14))
+			for (uint32_t m14 : MA.word_range(14))
 			{
 				S1.m[14] = m14; S1.computeQtp1(14); if ( (S1.Qt(15)>>31) != (S1.Qt(0)>>31) ) continue;
-*/
+
 			for (uint32_t m15 : MA.word_range(15))
 			{
 				S1.m[15] = m15; //S1.computeQtp1(15); if ( (S1.Qt(16)>>31) != (S1.Qt(0)>>31) ) continue;
 				if (ji == 0) ++t15ok;
 				if (test_collision(ihv1, ihv2, S1.m))
 				{
-					for (unsigned t = 0; t < 16; ++t)
-					{
-						std::cout << "block" << t << "=";
-						for (unsigned b = 0; b < 4; ++b)
-							std::cout << char((S1.m[t]>>(8*b))&0xFF);
-						std::cout << " ";
-					}
-					std::cout << std::endl;
-					std::cout << "\n ================================ \n FULL SOLUTION FOUND \n ================================" << std::endl;
+
+				        std::cout << "MSG: ";
+				        for (unsigned t = 0; t < 16; ++t)
+				        {
+				                for (unsigned b = 0; b < 4; ++b)
+				                        std::cout << char((S1.m[t]>>(8*b))&0xFF);
+				        }
+				        std::cout << std::endl;
+					std::cout << " ===== FULL SOLUTION FOUND =====" << std::endl;
 				        uint32 x = xrng128();
 				        std::string filename1 = "textcoll1_block2_" + boost::lexical_cast<string>(x) + ".txt";
 				        std::string filename2 = "textcoll2_block2_" + boost::lexical_cast<string>(x) + ".txt";
@@ -320,9 +323,9 @@ void textcoll_solver_t::start_block2()
 				        exit(0);
 				}
 			} // m15
-/*			} // m14
+			} // m14
 			} // m13
-			} // m12
+/*			} // m12
 			} // m11
 			} // m10
 			} // m9
