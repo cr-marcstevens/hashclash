@@ -4,6 +4,11 @@
 
 ## Feedback & pingback appreciated!
 
+I'm always curious to hear where HashClash is used for! ([@realhashbreaker](https://twitter.com/realhashbreaker)  on Twitter or let me know via [Issues](https://github.com/cr-marcstevens/hashclash/issues))
+
+
+If you like HashClash and use it more often then please consider becoming a sponsor.
+
 ## Requirements
 
 - C++11 compiler (e.g. g++)
@@ -108,3 +113,25 @@ $ xxd collision1.bin
   selected by N=1, 2 or 3.
   You can add your own choice of message word differences here
   and see if you can make your own collision attack!
+
+## Create you own text identical-prefix collision
+
+- Example:
+
+```
+md5("TEXTCOLLBYfGiJUETHQ4hAcKSMd5zYpgqf1YRDhkmxHkhPWptrkoyz28wnI9V0aHeAuaKnak")
+=
+md5("TEXTCOLLBYfGiJUETHQ4hEcKSMd5zYpgqf1YRDhkmxHkhPWptrkoyz28wnI9V0aHeAuaKnak")
+```
+
+- Create temporary working directory
+
+  `mkdir textcoll_workdir`
+
+  `cd textcoll_workdir`
+
+- Run script
+
+  `../scripts/textcoll.sh`
+
+- Edit the script for more options: change alphabet, force specific bytes, etc...
