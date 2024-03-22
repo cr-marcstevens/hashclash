@@ -156,7 +156,7 @@ void textcoll_solver_t::completeQ7Q24(const halfstate_t& Q7Q24state)
 		std::cout << "m13Q10good size: " << m13Q10good.size() << std::endl;
 		uint32_t Q9m9 = ~Qvaluemask[offset+9] & ~Qprev[offset+10] & S.Qt(11);
 		std::sort(m13Q10good.begin(), m13Q10good.end(), 
-			[Q9m9](auto& l, auto& r)
+			[Q9m9](const std::pair<uint32_t,uint32_t>& l, const std::pair<uint32_t,uint32_t>& r)
 			{
 				return hammingweight(Q9m9 & ~l.second)
 					> hammingweight(Q9m9 & ~r.second);
