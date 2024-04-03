@@ -128,6 +128,8 @@ int main(int argc, char** argv)
 			("help,h", "Show options.")
 			("quiet,q", "Be less verbose.")
 			("ihv,i", po::value<string>(&ihv), "Use specified initial value. Default is MD5 initial value.")
+			("seed1", po::value<uint32_t>(&seed32_1), "Specify a SEED1 value.  Default is based on time.")
+			("seed2", po::value<uint32_t>(&seed32_2), "Specify a SEED2 value.  Default is a constant value.")
 			("prefixfile,p", po::value<string>(&prefixfn), "Calculate initial value using given prefixfile. Also copies data to output files.")			
 			("out,o", po::value<vector<string> >()->multitoken(), "Set output filenames. This must be the last option and exactly 2 filenames must be specified. \nDefault: -o msg1.bin msg2.bin")
 			;
