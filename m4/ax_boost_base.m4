@@ -130,7 +130,7 @@ AC_DEFUN([_AX_BOOST_BASE_RUNDETECT],[
     dnl or if you install boost with RPM
     dnl AS_IF([test "x$_AX_BOOST_BASE_boost_path" != "x"],[
 
-    for _AX_BOOST_BASE_prefix_tmp in $_AX_BOOST_BASE_boost_path $(pwd)/boost-* ${HOME}/boost/boost-* /usr /usr/local /opt /opt/local ; do
+    for _AX_BOOST_BASE_prefix_tmp in $_AX_BOOST_BASE_boost_path $(pwd)/boost-* ${HOME}/boost/boost-* /usr /usr/local /opt /opt/local $(brew --prefix boost) ; do
       if test -d $_AX_BOOST_BASE_prefix_tmp/include/boost ; then
         AC_MSG_CHECKING([for boostlib >= $1 ($WANT_BOOST_VERSION) includes in "$_AX_BOOST_BASE_prefix_tmp/include"])
         AS_IF([test -d "$_AX_BOOST_BASE_prefix_tmp/include/boost" && test -r "$_AX_BOOST_BASE_prefix_tmp/include/boost"],[
