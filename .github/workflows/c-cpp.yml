@@ -21,6 +21,12 @@ jobs:
     - name: Install dependencies (macos)
       run: brew install boost automake libtool
       if: matrix.os == 'macos-latest'
+    - name: Debug step 1 (macos)
+      run: brew shellenv
+      if: matrix.os == 'macos-latest'
+    - name: Debug step 2 (macos)
+      run: brew doctor
+      if: matrix.os == 'macos-latest'
     - name: Prepare
       run: autoreconf --install
     - name: Configure
