@@ -19,13 +19,13 @@ jobs:
       run: sudo apt-get install -y libboost-system-dev libboost-filesystem-dev libboost-iostreams-dev libboost-thread-dev libboost-serialization-dev libboost-program-options-dev
       if: matrix.os == 'ubuntu-latest'
     - name: Install dependencies (macos)
-      run: brew install boost automake libtool
-      if: matrix.os == 'macos-latest'
-    - name: Debug step 1 (macos)
-      run: brew shellenv
-      if: matrix.os == 'macos-latest'
-    - name: Debug step 2 (macos)
-      run: brew doctor
+      run: |
+        brew update
+        brew upgrade
+        brew install boost automake libtool
+        echo "CPATH=$CPATH:$(brew --prefix)/include" >> "$GITHUB_ENV" &&
+        echo "LIBRARY_PATH=$LIBRARY_PATH:$(brew --prefix)/lib" >> "$GITHUB_ENV"
+        echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(brew --prefix)/lib" >> "$GITHUB_ENV"
       if: matrix.os == 'macos-latest'
     - name: Prepare
       run: autoreconf --install
@@ -52,7 +52,13 @@ jobs:
         path: boost_*.tar.gz
         key: ${{ matrix.os }}
     - name: Install dependencies (macos)
-      run: brew install automake libtool zlib bzip2
+      run: |
+        brew update
+        brew upgrade
+        brew install automake libtool zlib bzip2
+        echo "CPATH=$CPATH:$(brew --prefix)/include" >> "$GITHUB_ENV" &&
+        echo "LIBRARY_PATH=$LIBRARY_PATH:$(brew --prefix)/lib" >> "$GITHUB_ENV"
+        echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(brew --prefix)/lib" >> "$GITHUB_ENV"
       if: matrix.os == 'macos-latest'
     - name: Build
       run: ./build.sh
