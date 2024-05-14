@@ -70,10 +70,7 @@ struct simd_avx256_detail
 bool simd_device_avx256::init(const uint32 ihv1b[4], const uint32 ihv2b[4], const uint32 ihv2modb[4], const uint32 precomp1b[4], const uint32 precomp2b[4], const uint32 msg1b[16], const uint32 msg2b[16], uint32 hmask, uint32 dpmask, uint32 maxlen)
 {
 	// fix for old GCC versions
-	if (0)
-	{
-		detail = new simd_avx256_detail();
-	} else 
+	// detail = new simd_avx256_detail();
 	{
 		void* buffer;
 		if (posix_memalign(&buffer, 64, sizeof(simd_avx256_detail)) != 0)
