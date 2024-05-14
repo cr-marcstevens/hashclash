@@ -150,56 +150,36 @@ namespace hashclash {
 		{
 			return !(*this == r);
 		}
-	//private:
+
+
+		bool operator< (const differentialpath& r) const
+		{
+			const differentialpath& l = *this;
+			int tbegin = l.tbegin() < r.tbegin() ? l.tbegin() : r.tbegin();
+			for (int t = tbegin; t < l.tend() || t < r.tend(); ++t)
+			{
+				if (t >= l.tbegin() && t < l.tend()) {
+					if (t >= r.tbegin() && t < r.tend()) {
+						if (l[t] < r[t]) return true;
+						if (l[t] > r[t]) return false;
+					} else {
+						if (l[t] < wordconditions()) return true;
+						if (l[t] > wordconditions()) return false;
+					}
+				} else
+				{
+					if (t >= r.tbegin() && t < r.tend()) {
+						if (wordconditions() < r[t]) return true;
+						if (wordconditions() > r[t]) return false;
+					} 
+				}
+			}
+			return false;
+		}
+		//private:
 		int offset;
 		std::vector<wordconditions> path;
 	};
-
-	inline bool operator== (const differentialpath& l, const differentialpath& r)
-	{
-		int tbegin = l.tbegin() < r.tbegin() ? l.tbegin() : r.tbegin();
-		for (int t = tbegin; t < l.tend() || t < r.tend(); ++t)
-		{
-			if (t >= l.tbegin() && t < l.tend()) {
-				if (t >= r.tbegin() && t < r.tend()) {
-					if (l[t] != r[t]) 
-						return false;
-				} else
-					if (l[t] != wordconditions()) 
-						return false;
-			} else
-			{
-				if (t >= r.tbegin() && t < r.tend())
-					if (wordconditions() != r[t]) 
-						return false;
-			}
-		}
-		return true;
-	}
-
-	inline bool operator< (const differentialpath& l, const differentialpath& r)
-	{
-		int tbegin = l.tbegin() < r.tbegin() ? l.tbegin() : r.tbegin();
-		for (int t = tbegin; t < l.tend() || t < r.tend(); ++t)
-		{
-			if (t >= l.tbegin() && t < l.tend()) {
-				if (t >= r.tbegin() && t < r.tend()) {
-					if (l[t] < r[t]) return true;
-					if (l[t] > r[t]) return false;
-				} else {
-					if (l[t] < wordconditions()) return true;
-					if (l[t] > wordconditions()) return false;
-				}
-			} else
-			{
-				if (t >= r.tbegin() && t < r.tend()) {
-					if (wordconditions() < r[t]) return true;
-					if (wordconditions() > r[t]) return false;
-				} 
-			}
-		}
-		return false;
-	}
 
 } // namespace hashclash
 
