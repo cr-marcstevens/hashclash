@@ -21,7 +21,6 @@ jobs:
     - name: Install dependencies (macos)
       run: |
         brew update
-        brew upgrade
         brew install boost automake libtool
         echo "CPATH=$CPATH:$(brew --prefix)/include" >> "$GITHUB_ENV" &&
         echo "LIBRARY_PATH=$LIBRARY_PATH:$(brew --prefix)/lib" >> "$GITHUB_ENV"
@@ -54,7 +53,6 @@ jobs:
     - name: Install dependencies (macos)
       run: |
         brew update
-        brew upgrade
         brew install automake libtool zlib bzip2
         echo "CPATH=$CPATH:$(brew --prefix)/include" >> "$GITHUB_ENV" &&
         echo "LIBRARY_PATH=$LIBRARY_PATH:$(brew --prefix)/lib" >> "$GITHUB_ENV"
