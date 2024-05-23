@@ -243,7 +243,14 @@ struct dostep_thread {
 				for (; i < iend; ++i)
 					worker.md5_forward_differential_step(pathsin[i], container);
 			}
-		} catch (std::exception & e) { cerr << "Worker thread: caught exception:" << endl << e.what() << endl; } catch (...) {}
+			if (container.main_container != nullptr)
+			{
+				if (container.estimatefactor != 0)
+					container.estimate_flush_main();
+				else
+					container.push_back_flush_main();
+			}
+		} catch (std::exception & e) { cerr << "Worker thread: caught exception:" << endl << e.what() << endl; } catch (...) { cerr << "Worker thread: caught unknown exception!" << endl; }
 	}       
 };
 void dostep_threaded(vector<differentialpath>& in, path_container_autobalance& out)
@@ -255,9 +262,14 @@ void dostep_threaded(vector<differentialpath>& in, path_container_autobalance& o
 		dostep_progress = new progress_display(in.size(), true, cout, tstring, "      ", "e     ");
 	else
 		dostep_progress = new progress_display(in.size(), true, cout, tstring, "      ", "      ");
+
+	vector< path_container_autobalance > helpcontainers(out.threads, out);
 	boost::thread_group mythreads;
 	for (unsigned i = 0; i < out.threads; ++i)
-		mythreads.create_thread(dostep_thread(in,out));
+	{
+		helpcontainers[i].main_container = &out;
+		mythreads.create_thread( dostep_thread(in, helpcontainers[i]) );
+	}
 	mythreads.join_all();
 	if (dostep_progress->expected_count() != dostep_progress->count())
 		*dostep_progress += dostep_progress->expected_count() - dostep_progress->count();
