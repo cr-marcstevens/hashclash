@@ -179,7 +179,6 @@ public:
 	void push_back(const differentialpath& fullpath)
 	{
 		differentialpath pathback = fullpath;
-		//pathback = fullpath;
 		try {
 		cleanup(pathback);
 		} catch (std::exception& e) {
@@ -190,7 +189,6 @@ public:
 			show_path(pathback, m_diff);
 		}
 
-//		++verified;
 		if (!noverify && !test_path_fast(pathback, m_diff))
 		{
 			mut.lock();
@@ -247,6 +245,7 @@ public:
 			bestpaths.push_back(pathback);
 			if (hw(uint32(bestpaths.size()))==1) {
 				save_gz(bestpaths, workdir + "/bestpaths", binary_archive);
+				save_gz(bestpaths, workdir + "/bestpaths_t" + boost::lexical_cast<string>(tunnel) + "_c" + boost::lexical_cast<string>(cond), binary_archive);
 				cout << "Best paths: " << bestpaths.size() << endl;
 			}
 			mut.unlock();
@@ -268,6 +267,7 @@ public:
 		double p = test_path(pathback, m_diff);
 		cout << "Best path: totcompl=" << bestmaxcomp << " tottunnel=" << bestmaxtunnel << ", totcond=" << bestpathcond << ", p=" << p << endl;
 		save_gz(pathback, workdir + "/bestpath_t" + boost::lexical_cast<string>(tunnel) + "_c" + boost::lexical_cast<string>(cond), binary_archive);
+		save_gz(bestpaths, workdir + "/bestpaths_t" + boost::lexical_cast<string>(tunnel) + "_c" + boost::lexical_cast<string>(cond), binary_archive);
 		save_gz(pathback, workdir + "/bestpath_new", binary_archive);
 		save_gz(bestpaths, workdir + "/bestpaths_new", binary_archive);
 		try { boost::filesystem::rename(workdir + "/bestpath.bin.gz", workdir + "/bestpath_old.bin.gz"); } catch (...) {}
@@ -345,10 +345,10 @@ struct diffpathupper_less
 		if (_Left.path.size() < 3)
 			throw std::runtime_error("Lower differential paths of insufficient size");
 		unsigned t = _Left.tbegin() - 1;
-		uint32 LdQtp1   = _Left[t+1].diff();
-		uint32 RdQtp1   = _Right[t+1].diff();
 		if (_Left[t+1].hw() > _Right[t+1].hw()) return true;
 		if (_Left[t+1].hw() < _Right[t+1].hw()) return false;
+		uint32 LdQtp1   = _Left[t+1].diff();
+		uint32 RdQtp1   = _Right[t+1].diff();
 		for (unsigned b = 0; b < 32; ++b)
 		{
 			if ((LdQtp1 & (1<<b)) < (RdQtp1 & (1<<b)))
