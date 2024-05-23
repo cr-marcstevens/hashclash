@@ -78,6 +78,7 @@ int main(int argc, char** argv)
 			("join,j", po::value<vector<string> >(&parameters.files),
 									"Join files and save to outputfile1\n"
 									"Each filename has to be proceeded by -j\n")
+			("combinepaths", "Use the first partial path in inputfile2 to overwrite all paths in inputfile1\n")
 			("pathfromtext",		"Load path in text form from inputfile1\n"
 									"   and save as paths set to outputfile1\n")
 			("pathfromcollision",	"Reconstruct paths from colliding inputfiles")
@@ -157,6 +158,7 @@ int main(int argc, char** argv)
 					+vm.count("convert")
 					+vm.count("split")
 					+vm.count("join")
+					+vm.count("combinepaths")
 					+vm.count("pathfromtext")
 					+vm.count("pathfromcollision")
 					+vm.count("startpartialpathfromfile")
@@ -190,6 +192,8 @@ int main(int argc, char** argv)
 			return split(parameters);
 		if (vm.count("join"))
 			return join(parameters);
+		if (vm.count("combinepaths"))
+			return combinepaths(parameters);
 		if (vm.count("pathfromtext"))
 			return pathfromtext(parameters);
 		if (vm.count("pathfromcollision"))
