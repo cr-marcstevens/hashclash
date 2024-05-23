@@ -29,13 +29,14 @@ struct birthday_parameters {
 		: inputfile1(), inputfile2()
 		, outputfile1(), outputfile2()
 		, modn(1), modi(0)
-		, logpathlength(-1), maxblocks(16)
+		, logpathlength(-1), maxblocks(16), generatormode(false)
 		, threads(1), sputhreads(0)
 		, memhardlimit(false), distribution(false), cuda_enabled(false)
 	{}
 	unsigned threads;
 	unsigned sputhreads;
 	unsigned modn, modi;
+	bool generatormode;
 	std::string inputfile1, inputfile2;
 	std::string outputfile1, outputfile2;
 	int logpathlength;

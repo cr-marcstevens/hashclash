@@ -55,6 +55,7 @@ unsigned maxblocks = 64;
 bool memhardlimit = false;
 unsigned parameterspathtyperange = 0;
 unsigned procmodn = 0, procmodi = 0;
+bool generatormode = false;
 vector< pair<uint32,uint32> > singleblockdata;
 /**/
 
@@ -448,9 +449,9 @@ void distribute_trail(const trail_type& newtrail)
 	totwork += newtrail.len;
 	totworkallproc += newtrail.len;
 	uint32 procindex = newtrail.end[1] % procmodn;
-	if (procindex == procmodi) {
+	if (procindex == procmodi && !generatormode)
 		main_storage.insert_trail(newtrail);
-	} else
+	else
 		trail_distribution[procindex].push_back(newtrail);
 }
 
@@ -794,6 +795,8 @@ void birthday(birthday_parameters& parameters)
 {
 	procmodn = parameters.modn;
 	procmodi = parameters.modi;
+	generatormode = parameters.generatormode;
+
 	trail_distribution.resize(procmodn);
 
 	// add the modi parameter to the seed
@@ -937,8 +940,10 @@ void birthday(birthday_parameters& parameters)
 	while (!quit)
 	{
 		boost::this_thread::sleep(boost::posix_time::seconds(10));
-		if (procmodn > 1) {
-			if (save_timer.time() > 60) {
+		if (procmodn > 1 || generatormode)
+		{
+			if (save_timer.time() > 60)
+			{
 				load_save_trails();
 				save_timer.start();
 			} //else load_save_trails(false);
