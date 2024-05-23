@@ -41,7 +41,7 @@ namespace hashclash {
 	double test_path(const differentialpath& path, const uint32 blockdiff[]);	
 	double check_rotation(uint32 dR, uint32 dT, unsigned n, const wordconditions& Qt, const wordconditions& Qtp1, unsigned loopcount = (1<<10));
 
-	bool test_path_fast(const differentialpath& path, const uint32 blockdiff[]);
+	bool test_path_fast(const differentialpath& path, const uint32 blockdiff[], int tbegin = 0, int tend = 64);
 	bool check_rotation_fast(uint32 dR, uint32 dT, unsigned n, const wordconditions& Qt, const wordconditions& Qtp1, unsigned loopcount = (1<<10));
 
 	// cleans up differential path to backward conditions only

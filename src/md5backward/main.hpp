@@ -163,7 +163,7 @@ public:
 
 		if (!noverify)
 		{
-			if (!test_path_fast(path, m_diff))
+			if (!test_path_fast(path, m_diff, t-3, t+1))
 			{
 				mut.lock();
 				++verified;
