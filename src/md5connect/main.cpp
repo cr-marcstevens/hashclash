@@ -83,6 +83,10 @@ int main(int argc, char** argv)
 				, po::value<string>(&container.inputfilehigh)
 				, "Use specified inputfile for upper paths.")
 
+			("waitinputfile"
+				, po::bool_switch(&container.waitinputfile)
+				, "Wait until input files exist.")
+
 			("showinputpaths,s"
 				, po::bool_switch(&container.showinputpaths)
 				, "Show all input paths.\n")

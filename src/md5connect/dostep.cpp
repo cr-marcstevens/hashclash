@@ -129,15 +129,50 @@ void dostep(path_container& container)
 	const unsigned modn = container.modn;
 	const unsigned modi = container.modi;
 
+	vector< differentialpath> pathsinlow;
+
+	boost::thread_group mythreads;
+	mythreads.create_thread([&pathsinlow, &container]()
+	{
+		if (container.waitinputfile)
+		{
+			while (true)
+			{
+				boost::system::error_code ec;
+				if (boost::filesystem::exists(container.inputfilelow, ec))
+					break;
+				boost::this_thread::sleep(boost::posix_time::milliseconds(100));
+			}
+		}
+		try {
+			cout << "Loading " << container.inputfilelow << "..." << flush;
+			load_gz(pathsinlow, binary_archive, container.inputfilelow);
+			sort(pathsinlow.begin(), pathsinlow.end(), diffpathlower_less());
+			cout << "done: " << pathsinlow.size() << "." << endl;
+		} catch(...) {
+			cout << "failed." << endl;
+		}
+	});
+
 	vector< differentialpath > pathsinhigh, pathsout;
+	if (container.waitinputfile)
+	{
+		while (true)
+		{
+			boost::system::error_code ec;
+			if (boost::filesystem::exists(container.inputfilehigh, ec))
+				break;
+			boost::this_thread::sleep(boost::posix_time::milliseconds(100));
+		}
+	}
 	if (modn > 1) {
 		try {
-			vector< differentialpath > pathstmp2;
 			cout << "Loading " << container.inputfilehigh << "..." << flush;
+			vector< differentialpath > pathstmp2;
 			load_gz(pathstmp2, binary_archive, container.inputfilehigh);
 			random_permutation(pathstmp2);
 			for (unsigned j = modi; j < pathstmp2.size(); j += modn)
-				pathsinhigh.push_back(pathstmp2[j]);
+				pathsinhigh.push_back( std::move(pathstmp2[j]) );
 			sort(pathsinhigh.begin(), pathsinhigh.end(), diffpathupper_less());
 			cout << "done: " << pathsinhigh.size() << "." << endl;
 		} catch(...) {
@@ -153,19 +188,14 @@ void dostep(path_container& container)
 			cout << "failed." << endl;
 		}
 	}
+
+	// wait until loading of inputfilelow is also finished
+	mythreads.join_all();
+
+	if (pathsinlow.size() == 0)
+		throw std::runtime_error("No lower differential paths loaded!");
 	if (pathsinhigh.size() == 0)
 		throw std::runtime_error("No upper differential paths loaded!");
-	vector< differentialpath> pathsinlow;
-	try {
-		cout << "Loading " << container.inputfilelow << "..." << flush;
-		load_gz(pathsinlow, binary_archive, container.inputfilelow);
-		sort(pathsinlow.begin(), pathsinlow.end(), diffpathlower_less());
-		cout << "done: " << pathsinlow.size() << "." << endl;
-	} catch(...) {
-		cout << "failed." << endl;
-	}
-	if (pathsinlow.size() == 0)
-		throw std::runtime_error("No lower differential paths loaded!");	
 
 	lowdQt.resize(pathsinlow.size());
 	lowdQtm1.resize(pathsinlow.size());

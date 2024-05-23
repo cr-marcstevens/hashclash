@@ -161,7 +161,7 @@ class path_container {
 public:
 	path_container()
 		: modn(1), modi(0), inputfilelow(), inputfilehigh()
-		, t(0), noverify(false), noenhancepath(false)
+		, t(0), noverify(false), noenhancepath(false), showinputpaths(false), waitinputfile(false)
 		, verified(0), verifiedbad(0), bestpathcond(1<<20)
 		, bestmaxtunnel(0), showstats(false), bestmaxcomp(-1000), threads(1)
 	{
@@ -290,7 +290,7 @@ public:
 	unsigned modn;
 	unsigned modi;
 	std::string inputfilelow, inputfilehigh;
-	bool showinputpaths;
+	bool showinputpaths, waitinputfile;
 
 	differentialpath bestpath;
 	vector<differentialpath> bestpaths;
