@@ -354,17 +354,11 @@ void dostep(path_container_autobalance& container, bool savetocache)
 		cout << "Estimating maxcond for upper bound " << unsigned(double(container.ubound)*container.estimatefactor)
 			<< " (=" << container.ubound << " * " << container.estimatefactor << ")..." << endl;
 		dostep_threaded(pathsin, container);
-//		progress_display show_progress(pathsin.size(), true, cout, tstring, "      ", "e     ");
-//		for (unsigned k = 0; k < pathsin.size(); ++k,++show_progress)
-//			md5_forward_differential_step(pathsin[k], container);
 		container.finish_estimate();
 		cout << "Found maxcond = " << container.maxcond << endl;
 	}
 
 	dostep_threaded(pathsin, container);
-//	progress_display show_progress(pathsin.size(), true, cout, tstring, "      ", "      ");
-//	for (unsigned k = 0; k < pathsin.size(); ++k,++show_progress)
-//		md5_forward_differential_step(pathsin[k], container);
 
 	pathstmp.swap(pathsout);	
 	container.export_results(pathsout);
@@ -373,11 +367,42 @@ void dostep(path_container_autobalance& container, bool savetocache)
 		show_path(pathsout[0], container.m_diff);
 	else
 		throw std::runtime_error("No valid differential paths found!");
-	std::string filenameout = pathsstring("paths" + boost::lexical_cast<std::string>(t), modi, modn);
+
 	cout << "Saving " << pathsout.size() << " paths..." << flush;
 	if (savetocache)
+	{
 		pathscache.swap(pathsout);
-	else
+		cout << "cached." << endl;
+		return;
+	}
+	unsigned splitsave = container.splitsave;
+	if (splitsave <= 1)
+	{
+		std::string filenameout = pathsstring("paths" + boost::lexical_cast<std::string>(t), modi, modn);
 		save_gz(pathsout, filenameout, binary_archive);
+		cout << "done." << endl;
+		return;
+	}
+	boost::thread_group mythreads;
+	unsigned threads = std::min<unsigned>(container.threads, splitsave);
+	for (unsigned j = 0; j < threads; ++j)
+	{
+		mythreads.create_thread(
+		[t,j,splitsave,threads,&pathsout]()
+		{
+			vector<differentialpath> pathsouti;
+			pathsouti.reserve( size_t(double(pathsout.size())/double(splitsave)+2) );
+			for (unsigned i = j; i < splitsave; i += threads)
+			{
+				std::string filenameout = pathsstring("paths" + boost::lexical_cast<std::string>(t), i, splitsave);
+				pathsouti.clear();
+				for (size_t k = i; k < pathsout.size(); k += splitsave)
+					pathsouti.emplace_back( std::move( pathsout[k] ));
+				save_gz(pathsouti, filenameout, binary_archive);
+				cout << " " << i;
+			}
+		});
+	}
+	mythreads.join_all();
 	cout << "done." << endl;
 }

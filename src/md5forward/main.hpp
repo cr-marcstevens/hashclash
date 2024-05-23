@@ -394,6 +394,8 @@ public:
 
 	unsigned modn;
 	unsigned modi;
+	unsigned splitsave;
+
 	std::string inputfile;
 	bool showinputpaths;
 	bool normalt01;
