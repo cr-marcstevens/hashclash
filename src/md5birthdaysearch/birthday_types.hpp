@@ -30,7 +30,7 @@ struct birthday_parameters {
 		, outputfile1(), outputfile2()
 		, modn(1), modi(0)
 		, logpathlength(-1), maxblocks(16), generatormode(false)
-		, threads(1), sputhreads(0)
+		, threads(1), sputhreads(0), saveloadwait(60)
 		, memhardlimit(false), distribution(false), cuda_enabled(false)
 	{}
 	unsigned threads;
@@ -43,6 +43,7 @@ struct birthday_parameters {
 	unsigned maxblocks;
 	unsigned hybridbits, pathtyperange;
 	unsigned maxmemory; // in MB, this is NOT a hard limit
+	unsigned saveloadwait;
 	bool memhardlimit;
 	bool distribution;
 	bool cuda_enabled;
