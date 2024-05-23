@@ -79,6 +79,7 @@ int main(int argc, char** argv)
 									"Join files and save to outputfile1\n"
 									"Each filename has to be proceeded by -j\n")
 			("combinepaths", "Use the first partial path in inputfile2 to overwrite all paths in inputfile1\n")
+			("negatepaths", "Negate paths for negated message differences\n")
 			("pathfromtext",		"Load path in text form from inputfile1\n"
 									"   and save as paths set to outputfile1\n")
 			("pathfromcollision",	"Reconstruct paths from colliding inputfiles")
@@ -159,6 +160,7 @@ int main(int argc, char** argv)
 					+vm.count("split")
 					+vm.count("join")
 					+vm.count("combinepaths")
+					+vm.count("negatepaths")
 					+vm.count("pathfromtext")
 					+vm.count("pathfromcollision")
 					+vm.count("startpartialpathfromfile")
@@ -194,6 +196,8 @@ int main(int argc, char** argv)
 			return join(parameters);
 		if (vm.count("combinepaths"))
 			return combinepaths(parameters);
+		if (vm.count("negatepaths"))
+			return negatepaths(parameters);
 		if (vm.count("pathfromtext"))
 			return pathfromtext(parameters);
 		if (vm.count("pathfromcollision"))

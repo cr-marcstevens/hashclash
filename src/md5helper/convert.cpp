@@ -259,6 +259,56 @@ int combinepaths(parameters_type& parameters)
 	return 0;
 }
 
+int negatepaths(parameters_type& parameters)
+{
+	if (parameters.outfile1 == "")
+	{
+		cout << "No outputfile1 given!" << endl;
+		return 2;
+	}
+	if (parameters.infile1 == "")
+	{
+		cout << "No inputfile1 given!" << endl;
+		return 2;
+	}
+	vector<differentialpath> vecpath;
+	cout << "Loading " << parameters.infile1 << "..." << flush;
+	try {
+		load_gz(vecpath, binary_archive, parameters.infile1);
+		cout << "done (loaded " << vecpath.size() << " paths)." << endl;
+	} catch (...) {
+		cout << "failed." << endl;
+		return 3;
+	}
+	if (vecpath.empty())
+		return 5;
+	show_path(vecpath.front(), parameters.m_diff);
+	for (auto& p : vecpath)
+	{
+		for (int t = p.tbegin(); t < p.tend(); ++t)
+		{
+			for (unsigned b = 0; b < 32; ++b)
+			{
+				auto bc = p(t,b);
+				if (bc==bc_plus)
+					p.setbitcondition(t,b,bc_minus);
+				else if (bc==bc_minus)
+					p.setbitcondition(t,b,bc_plus);
+			}
+		}
+	}
+	cout << "Saving " << vecpath.size() << " paths to " << parameters.outfile1 << "..." << flush;
+	try {
+		save_gz(vecpath, binary_archive, parameters.outfile1);
+		cout << "done." << endl;
+	} catch (...) {
+		cout << "failed." << endl;
+		return 1;
+	}
+	show_path(vecpath.front(), parameters.m_diff);
+	return 0;
+}
+
 int convert(parameters_type& parameters)
 {	
 	differentialpath path;	

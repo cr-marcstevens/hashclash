@@ -64,6 +64,7 @@ int convert(parameters_type& parameters);
 int split(parameters_type& parameters);
 int join(parameters_type& parameters);
 int combinepaths(parameters_type& parameters);
+int negatepaths(parameters_type& parameters);
 int pathfromtext(parameters_type& parameters);
 int pathfromcollision(parameters_type& parameters);
 int collisionfinding(parameters_type& parameters);
