@@ -157,10 +157,12 @@ public:
 				maxcond += (nafestweight>>1);
 			else
 				maxcond += nafestweight;
-		pathsout.clear();
 		pathsout.resize(maxcond + 1);
-		condcount.clear();
+		for (auto& v : pathsout)
+			v.clear();
 		condcount.resize(maxcond + 1);
+		for (auto& v : condcount)
+			v = 0;
 	}
 
 	void push_back(const differentialpath& path, unsigned cond = 0)
@@ -295,15 +297,16 @@ public:
 		}
 	}
 
-	void export_results(vector< differentialpath >& outpaths) const
+	void export_results(vector< differentialpath >& outpaths)
 	{
 		outpaths.clear();
 		outpaths.reserve(ubound);
 		for (unsigned k = 0; k < pathsout.size() && k <= maxcond; ++k)
 		{
-			unsigned index = unsigned(outpaths.size());
-			outpaths.resize(index + pathsout[k].size());
-			std::copy(pathsout[k].begin(), pathsout[k].end(), outpaths.begin()+index);
+			if (ubound > 0 && outpaths.size() + pathsout[k].size() > ubound)
+				pathsout[k].resize(ubound - outpaths.size());
+			for (auto& p : pathsout[k])
+				outpaths.emplace_back( std::move(p) );
 		}
                 unsigned hbound = unsigned(double(ubound)*fillfraction);
                 unsigned k = maxcond+1;
@@ -312,8 +315,8 @@ public:
                         unsigned length = hbound-index;
                         if (length > pathsout[k].size())
                                 length = pathsout[k].size();
-			outpaths.resize(index + length);
-                        std::copy(pathsout[k].begin(), pathsout[k].begin()+length, outpaths.begin()+index);
+			for (size_t i = 0; i < length; ++i)
+				outpaths.emplace_back( std::move(pathsout[k][i]) );
                         ++k;
                 }
 	}
