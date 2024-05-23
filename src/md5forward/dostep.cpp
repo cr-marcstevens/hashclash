@@ -225,17 +225,21 @@ struct dostep_thread {
 		try {
 			while (true) {
 				mut.lock();
+
 				unsigned i = dostep_index;
-				unsigned iend = i + (unsigned(pathsin.size() - dostep_index)>>4);
-				if (iend > i+4) iend = i+4;
-				if (iend == i && i < pathsin.size())
-					iend = i+1;
-				if (iend != i)
-					(*dostep_progress) += iend-i;
+				if (i >= pathsin.size())
+				{
+					mut.unlock();
+					break;
+				}
+				unsigned cnt = std::max<unsigned>(1, std::min<unsigned>(16, (pathsin.size() - i)/128 ));
+				unsigned iend = i + cnt;
+
+				if (cnt != 0)
+					(*dostep_progress) += cnt;
 				dostep_index = iend;
 				mut.unlock();
-				if (i >= pathsin.size())
-					break;
+
 				for (; i < iend; ++i)
 					worker.md5_forward_differential_step(pathsin[i], container);
 			}
