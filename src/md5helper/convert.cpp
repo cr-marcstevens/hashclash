@@ -168,7 +168,17 @@ int join(parameters_type& parameters)
 			load_gz(joinvec, binary_archive, parameters.files[i]);
 			cout << "done (loaded " << joinvec.size() << " paths)." << endl;
 			for (unsigned j = 0; j < joinvec.size(); ++j)
-				vecpath.push_back(joinvec[j]);
+				vecpath.emplace_back( std::move(joinvec[j]) );
+			continue;
+		} catch (...) {
+			cout << "bad." << flush;
+		}
+		// failed to load file as vector of diffpaths, now try as (single) diffpath itself
+		joinvec.resize(1);
+		try {
+			load_gz(joinvec.front(), binary_archive, parameters.files[i]);
+			cout << "done (loaded 1 path)." << endl;
+			vecpath.emplace_back( std::move(joinvec.front()) );
 		} catch (...) {
 			cout << "failed." << endl;
 		}
