@@ -291,6 +291,8 @@ public:
 			} else {
 				size = newsize + pathsout[k].size();
 				maxcond = k;
+				if (size > ubound)
+					maxcond = k-1;
 			}
 			for (unsigned j = maxcond+2; j < pathsout.size(); ++j)
 				pathsout[j].clear();
