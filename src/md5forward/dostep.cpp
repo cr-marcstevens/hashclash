@@ -213,7 +213,7 @@ void dostep1(const path_container_autobalance& container)
 
 
 progress_display* dostep_progress = 0;
-unsigned dostep_index = 0;
+volatile unsigned dostep_index = 0;
 struct dostep_thread {
 	dostep_thread(vector<differentialpath>& in, path_container_autobalance& out)
 		: pathsin(in), container(out)   
