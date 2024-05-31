@@ -1054,7 +1054,7 @@ msgdiff_tuples_t msgdiff_tuples[] = {
 
 void print_coll(uint64_t total, const uint32_t ihv1[4], const uint32_t block1[16], const uint32_t ihv2[4], const uint32_t block2[16]) {
 	unsigned i;
-	printf("Found collision in block %d:\n   dm: ", ((total>>6)-1));
+	printf("Found collision in block %d:\n   dm: ", (((total+63)>>6)-1));
 	for (i = 0; i < 16; ++i)
 		if (block2[i]-block1[i])
 			printf("dm%d=%08x ", i, block2[i]-block1[i]);
