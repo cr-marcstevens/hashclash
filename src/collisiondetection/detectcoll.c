@@ -1118,7 +1118,7 @@ void md5_process(MD5_CTX* ctx, const uint32_t* block)
 	}
 	// check for special den Boer & Bosselaers attack (zero difference block, differential path entirely MSB differences)
 	const uint32_t MSBdiff = uint32_t(1)<<31;
-	if (ctx->total >= 128 && md5recompress_fast(44, ctx->ihv2, block, ctx->statesmsb+((44+1)*4), ctx->ihv)) {
+	if (ctx->total > 64-9 && md5recompress_fast(44, ctx->ihv2, block, ctx->statesmsb+((44+1)*4), ctx->ihv)) {
 		if ((ctx->ihv2[0] != (ctx->ihv1[0]^MSBdiff)) || (ctx->ihv2[1] != (ctx->ihv1[1]^MSBdiff)) || (ctx->ihv2[2] != (ctx->ihv1[2]^MSBdiff)) || (ctx->ihv2[3] != (ctx->ihv1[3]^MSBdiff))) {
 			// not den Boer & Bosselears attack, but regular near-collision attack
 			print_coll(ctx->total, ctx->ihv1, block, ctx->ihv2, block);
@@ -1245,6 +1245,7 @@ int MD5_Finish(unsigned char output[16], MD5_CTX *ctx)
 	ctx->buffer[61] = (unsigned char)(ctx->total>>40);
 	ctx->buffer[62] = (unsigned char)(ctx->total>>48);
 	ctx->buffer[63] = (unsigned char)(ctx->total>>56);
+	ctx->total >>= 3;
 	if (ctx->bigendian)
 		swap_bytes((uint32_t*)(ctx->buffer));
 	md5_process(ctx, (uint32_t*)(ctx->buffer));
