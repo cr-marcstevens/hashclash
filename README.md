@@ -82,7 +82,7 @@ If you like HashClash and use it more often then please consider becoming a spon
 
   `echo -n "TEST" > prefix.txt`
 
-  `../scripts/poc_no.sh prefix.txt`
+  `../scripts/ipc.sh prefix.txt`
 
   Note: the prefix file is expected to be a multiple of 64 bytes 
   and optionally plus a small multiple of 4 bytes.
@@ -109,7 +109,7 @@ $ xxd collision1.bin
 
 - Make your own attack
 
-  Inside poc_no.sh there are three examples of identical-prefix collision attacks,
+  Inside ipc.sh there are three examples of identical-prefix collision attacks,
   selected by N=1, 2 or 3.
   You can add your own choice of message word differences here
   and see if you can make your own collision attack!
