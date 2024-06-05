@@ -931,8 +931,8 @@ void birthday(birthday_parameters& parameters)
 		std::cout << "Found " << cuda_dev_cnt << " CUDA devices." << std::endl;
 	}
 	// if possible save 1 cpucore for better cuda latency
-	if (parameters.threads > 1 && cuda_dev_cnt > 0 && parameters.threads == boost::thread::hardware_concurrency())
-		--parameters.threads;
+	if (parameters.threads > cuda_dev_cnt)// && parameters.threads == boost::thread::hardware_concurrency())
+		parameters.threads -= cuda_dev_cnt;
 #endif
 
 	boost::thread_group threads;
