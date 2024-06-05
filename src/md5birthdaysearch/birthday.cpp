@@ -646,6 +646,7 @@ struct birthday_thread {
 		vector<trail_type> work;
 		vector< pair<trail_type, trail_type> > collisions;
 		bool verified = false;
+		size_t workamount = (size_t(1)<<26) / size_t(distinguishedpointmask+1);
 		while (true)
 		{
 			uint64 seed;
@@ -664,9 +665,10 @@ struct birthday_thread {
 			{
 				for (unsigned i = 0; i < collisions.size(); ++i)
 					find_collision(collisions[i].first, collisions[i].second);
-				collisions.clear();
 			}
-			else {
+			// if little work has been done processing trail collisions then still do some work
+			if (collisions.size() * size_t(4) < workamount)
+			{
 				work.clear();
 				_simd_device.fill_trail_buffer(seed, work, bool(maxblocks == 1));
 				if (!verified && !work.empty())
@@ -688,6 +690,7 @@ struct birthday_thread {
 					distribute_trail(work[i]);
 				distribute_trail_flush();
 			}
+			collisions.clear();
 			if (single)
 				break;
 		}
@@ -707,17 +710,18 @@ struct birthday_thread {
 			loop_simd(single);
 			return;
 		}
-
-		vector<trail_type> work(256);
+		size_t workamount = (size_t(1)<<26) / size_t(distinguishedpointmask+1);
+		vector<trail_type> work(workamount);
 		vector< pair<trail_type,trail_type> > collisions;
 		while (true)
 		{
+			collisions.clear();
 			// generate a batch of new trail starting points
 			{
 				LOCK_GLOBAL_MUTEX;				
 				if (quit) return;
 				main_storage.get_birthdaycollisions(collisions);
-				work.resize(256);
+				work.resize(workamount);
 				for (unsigned i = 0; i < work.size(); ++i)
 				{
 					work[i].start[0] = xrng128();
@@ -732,8 +736,10 @@ struct birthday_thread {
 			{
 				for (unsigned i = 0; i < collisions.size(); ++i)
 					find_collision(collisions[i].first, collisions[i].second);
-				collisions.clear();
-				continue;
+				// if not enough work has been done on processing collisions then generate trails as well
+				// if enough work has been done then go to start of loop
+				if (collisions.size() * size_t(4) >= workamount)
+					continue;
 			}
 			
 			// generate the trails

@@ -115,7 +115,7 @@ void simd_device_avx256::fill_trail_buffer(uint64 seed, vector<trail_type>& buf,
 			detail->s2.w[i] = detail->e2.w[i] = 0;
 		}
 	}
-	for (unsigned k = 0; k < 0x400; ++k)
+	for (unsigned k = 0; k < (1<<24); ++k)
 	{
 		birthday_step_avx256(*detail, detail->e0.v, detail->e1.v, detail->e2.v, mod);
 		simd_word_t l, t;
