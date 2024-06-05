@@ -50,10 +50,22 @@ if [ "$3" = "" ] ; then
 		$BIRTHDAYSEARCH --inputfile1 "$file1" --inputfile2 "$file2" --hybridbits 0 --pathtyperange 2 --maxblocks 9 --maxmemory 100 --threads $CPUS --cuda_enable
 	fi
 	notify "Birthday search completed."
+
+	PREFIX1=file1.bin
+	PREFIX2=file2.bin
+	COLL1=`ls data/birthdayblock1_*.bin | head -n1`
+	if [ ! -f $COLL1 ]; then
+		echo "Birthday block file $COLL1 not found"
+		exit 1
+	fi
+	COLL2=`echo $COLL1 | sed "s/birthdayblock1/birthdayblock2/"`
+
+	cat $PREFIX1 $COLL1 > file1_0.bin
+	cat $PREFIX2 $COLL2 > file2_0.bin
 else
 	if [ "$4" != "" ]; then
-		cp $file1 file1.bin
-		cp $file2 file2.bin
+		cp $file1 file1_0.bin
+		cp $file2 file2_0.bin
 	fi
 fi
 
@@ -63,7 +75,7 @@ function doforward {
 }
 
 function dobackward {
-	$BACKWARD -w $1 -f $1/upperpath.bin.gz -t 34 --trange 4 -a 65536 -q 128 --threads $CPUS || return 1
+	$BACKWARD -w $1 -f $1/upperpath.bin.gz -t 36 --trange 6 -a 65536 -q 128 --threads $CPUS || return 1
 	$BACKWARD -w $1 -t 29 -a 100000 --trange 8 --threads $CPUS || return 1
 	$BACKWARD -w $1 -t 20 -a 16384 --threads $CPUS || return 1
 	$BACKWARD -w $1 -t 19 -a 500000 --trange $((18-$TTT-3)) --threads $CPUS || return 1
@@ -163,8 +175,8 @@ function auto_kill
 	kill -KILL $pid &>/dev/null
 }
 
-cp file1.bin file1_0.bin
-cp file2.bin file2_0.bin
+#cp file1.bin file1_0.bin
+#cp file2.bin file2_0.bin
 let k=0
 if [ "$3" != "" ]; then
 	let k=$3
