@@ -443,15 +443,23 @@ void find_collision(const trail_type& trail1, const trail_type& trail2)
 
 
 // LOCK_GLOBAL_MUTEX required
+vector<trail_type> main_storage_buffer;
 void distribute_trail(const trail_type& newtrail) 
 {
 	totwork += newtrail.len;
 	totworkallproc += newtrail.len;
 	uint32 procindex = newtrail.end[1] % procmodn;
 	if (procindex == procmodi && !generatormode)
-		main_storage.insert_trail(newtrail);
+//		main_storage.insert_trail(newtrail);
+		main_storage_buffer.emplace_back(newtrail);
 	else
 		trail_distribution[procindex].push_back(newtrail);
+}
+// LOCK_GLOBAL_MUTEX required
+void distribute_trail_flush() 
+{
+	main_storage.insert_trails(main_storage_buffer);
+	main_storage_buffer.clear();
 }
 
 // LOCK_GLOBAL_MUTEX required
@@ -625,7 +633,8 @@ struct birthday_thread {
 			else {
 				LOCK_GLOBAL_MUTEX;
 				for (unsigned i = 0; i < work.size(); ++i) 
-					distribute_trail(work[i]); 
+					distribute_trail(work[i]);
+				distribute_trail_flush();
 			}
 			if (single)
 				break;
@@ -677,6 +686,7 @@ struct birthday_thread {
 				LOCK_GLOBAL_MUTEX;
 				for (unsigned i = 0; i < work.size(); ++i) 
 					distribute_trail(work[i]);
+				distribute_trail_flush();
 			}
 			if (single)
 				break;
@@ -735,6 +745,7 @@ struct birthday_thread {
 				LOCK_GLOBAL_MUTEX;
 				for (unsigned i = 0; i < work.size(); ++i)
 					distribute_trail(work[i]); 
+				distribute_trail_flush();
 			}
 
 			if (single)
