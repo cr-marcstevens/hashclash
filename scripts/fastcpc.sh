@@ -256,12 +256,17 @@ for (( i=0; ; ++i)); do
 	logthis 0 "NC-BLOCK $i" "Starting connect process in background ..."
 	HALFTHREADS=$((`nproc`/2))
 	logthis 2 "NC-BLOCK $i" "Running command: $HASHCLASHBIN/md5_diffpathconnect --threads $HALFTHREADS -w workdir$i -t $TTT --inputfilelow workdir$i/paths$(($TTT-1))_0of1.bin.gz.done --inputfilehigh $UPPERPATH > workdir$i/connect.log &"
-	$HASHCLASHBIN/md5_diffpathconnect --threads $HALFTHREADS -w workdir$i -t $TTT --inputfilelow workdir$i/paths$(($TTT-1))_0of1.bin.gz.done --inputfilehigh $UPPERPATH > workdir$i/connect.log 2>&1 &
+	INPUTFILELOW=workdir$i/paths$(($TTT-1))_0of1.bin.gz
+	$HASHCLASHBIN/md5_diffpathconnect --threads $HALFTHREADS -w workdir$i -t $TTT --inputfilelow $INPUTFILELOW.done --inputfilehigh $UPPERPATH > workdir$i/connect.log 2>&1 &
 
 	logthis 0 "NC-BLOCK $i" "Forward phase ..."
 	logthis 2 "NC-BLOCK $i" "Running command: $HASHCLASHBIN/md5_diffpathforward -w workdir$i -f workdir$i/lowerpath.bin.gz --normalt01 -t 1 --trange $(($TTT-2)) > workdir$i/forward.log"
 	$HASHCLASHBIN/md5_diffpathforward -w workdir$i -f workdir$i/lowerpath.bin.gz --normalt01 -t 1 --trange $(($TTT-2)) > workdir$i/forward.log 2>&1
-	mv workdir$i/paths$(($TTT-1))_0of1.bin.gz workdir$i/paths$(($TTT-1))_0of1.bin.gz.done
+	if [ ! $INPUTFILELOW ]; then
+		logthis 0 "NC-BLOCK $i" "Error: $INPUTFILELOW not found, forward failed?"
+		exit 1
+	fi
+	mv $INPUTFILELOW $INPUTFILELOW.done
 
 	logthis 0 "NC-BLOCK $i" "Wait for full differential paths from connect"
 	while [ ! -f workdir$i/bestpaths.bin.gz ]; do
@@ -294,7 +299,7 @@ for (( i=0; ; ++i)); do
 			PATHQUALITY=`cat workdir$i/connect.log | grep "tottunnel" | tail -n1 | grep -o "tottunnel=[0-9]*, totcond=[0-9]*"`
 			cp workdir$i/bestpaths.bin.gz workdir$i/latest_bestpaths.bin.gz
 			JOIN="-j workdir$i/latest_bestpaths.bin.gz"
-			for f in workdir$i/bestpaths_t[789]* workdir$i/bestpaths_t[456]* ; do
+			for f in workdir$i/bestpaths_t3[789]* workdir$i/bestpaths_t[456]* ; do
 				if [ -f $f ]; then
 					JOIN="$JOIN -j $f"
 				fi
