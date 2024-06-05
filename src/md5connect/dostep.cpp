@@ -145,10 +145,11 @@ void dostep(path_container& container)
 			}
 		}
 		try {
+			hashclash::timer loadtime(true);
 			cout << "Loading " << container.inputfilelow << "..." << flush;
 			load_gz(pathsinlow, binary_archive, container.inputfilelow);
 			sort(pathsinlow.begin(), pathsinlow.end(), diffpathlower_less());
-			cout << "done: " << pathsinlow.size() << "." << endl;
+			cout << "done: " << pathsinlow.size() << ". (" << loadtime.time() << "s)" << endl;
 		} catch(...) {
 			cout << "failed." << endl;
 		}
@@ -167,6 +168,7 @@ void dostep(path_container& container)
 	}
 	if (modn > 1) {
 		try {
+			hashclash::timer loadtime(true);
 			cout << "Loading " << container.inputfilehigh << "..." << flush;
 			vector< differentialpath > pathstmp2;
 			load_gz(pathstmp2, binary_archive, container.inputfilehigh);
@@ -174,16 +176,17 @@ void dostep(path_container& container)
 			for (unsigned j = modi; j < pathstmp2.size(); j += modn)
 				pathsinhigh.push_back( std::move(pathstmp2[j]) );
 			sort(pathsinhigh.begin(), pathsinhigh.end(), diffpathupper_less());
-			cout << "done: " << pathsinhigh.size() << "." << endl;
+			cout << "done: " << pathsinhigh.size() << ". (" << loadtime.time() << "s)" << endl;
 		} catch(...) {
 			cout << "failed." << endl;
 		}
 	} else {
 		try {
+			hashclash::timer loadtime(true);
 			cout << "Loading " << container.inputfilehigh << "..." << flush;
 			load_gz(pathsinhigh, binary_archive, container.inputfilehigh);
 			sort(pathsinhigh.begin(), pathsinhigh.end(), diffpathupper_less());
-			cout << "done: " << pathsinhigh.size() << "." << endl;
+			cout << "done: " << pathsinhigh.size() << ". (" << loadtime.time() << "s)" << endl;
 		} catch(...) {
 			cout << "failed." << endl;
 		}
