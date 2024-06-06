@@ -239,7 +239,7 @@ public:
 		if (!check_path_collfind(pathback, m_diff)) 
 			return;
 
-		if (tuncompl == bestmaxcomp && tunnel == bestmaxtunnel && cond == bestpathcond) {
+		if (tuncompl == bestmaxcomp && tunnel == bestmaxtunnel && cond <= bestpathcond + 4) {
 			mut.lock();
 			++verified;
 			bestpaths.push_back(pathback);
