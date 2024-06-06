@@ -4,7 +4,7 @@ PATHTYPERANGE=2
 HYBRIDBITS=0
 MAXBLOCKS=7
 MAXMEMORY=8000
-UPPERPATHCOUNT=2000000
+UPPERPATHCOUNT=1000000
 TTT=12
 
 VERBOSE_LOG=2
@@ -182,7 +182,7 @@ EOF
 
 cat <<EOF > md5diffpathforward.cfg.template
 autobalance = 3000000
-estimate = 1.3
+estimate = 2
 fillfraction = 1
 maxsdrs = 128
 minQ456tunnel = 18
@@ -262,15 +262,22 @@ for (( i=0; ; ++i)); do
 	logthis 0 "NC-BLOCK $i" "Forward phase ..."
 	logthis 2 "NC-BLOCK $i" "Running command: $HASHCLASHBIN/md5_diffpathforward -w workdir$i -f workdir$i/lowerpath.bin.gz --normalt01 -t 1 --trange $(($TTT-2)) > workdir$i/forward.log"
 	$HASHCLASHBIN/md5_diffpathforward -w workdir$i -f workdir$i/lowerpath.bin.gz --normalt01 -t 1 --trange $(($TTT-2)) > workdir$i/forward.log 2>&1
-	if [ ! $INPUTFILELOW ]; then
+	if [ ! -f $INPUTFILELOW ]; then
 		logthis 0 "NC-BLOCK $i" "Error: $INPUTFILELOW not found, forward failed?"
 		exit 1
 	fi
 	mv $INPUTFILELOW $INPUTFILELOW.done
 
 	logthis 0 "NC-BLOCK $i" "Wait for full differential paths from connect"
+	let w=0
 	while [ ! -f workdir$i/bestpaths.bin.gz ]; do
 		sleep 1
+		let w=w+1
+		if [ $w -gt 1200 ]; then
+			logthis 0 "NC-BLOCK $i" "Time-out! Aborting ..."
+			killall md5_diffpathconnect
+			exit 1
+		fi
 	done
 	
 	PATHQUALITY=`cat workdir$i/connect.log | grep "tottunnel" | tail -n1 | grep -o "tottunnel=[0-9]*, totcond=[0-9]*"`
@@ -278,8 +285,8 @@ for (( i=0; ; ++i)); do
 	logthis 0 "NC-BLOCK $i" "Starting collision finding: $PATHQUALITY"
 	$HASHCLASHBIN/md5_diffpathhelper -w workdir$i --combinepaths --outputfile1 workdir$i/collfindpaths.bin.gz --inputfile1 workdir$i/latest_bestpaths.bin.gz --inputfile2 workdir$i/upperpath.bin.gz >> workdir$i/collfindpath.log 2>&1
 	$HASHCLASHBIN/md5_diffpathhelper -w workdir$i --inputfile1 workdir$i/collfindpaths.bin.gz --findcollision --threads $HALFTHREADS >> workdir$i/collfind.log 2>&1 &
-	lastw=0
-	for (( w = 0; ; ++w )); do
+	let lastw=0
+	for (( ; ; ++w )); do
 		sleep 1
 		if [ $w -gt 1200 ]; then
 			logthis 0 "NC-BLOCK $i" "Time-out! Aborting ..."
@@ -295,7 +302,7 @@ for (( i=0; ; ++i)); do
 		fi
 		if [ $(($w - $lastw)) -ge 10 ]; then
 		if [ workdir$i/bestpaths.bin.gz -nt workdir$i/latest_bestpaths.bin.gz ]; then
-			lastw=$w
+			let lastw=$w
 			PATHQUALITY=`cat workdir$i/connect.log | grep "tottunnel" | tail -n1 | grep -o "tottunnel=[0-9]*, totcond=[0-9]*"`
 			cp workdir$i/bestpaths.bin.gz workdir$i/latest_bestpaths.bin.gz
 			JOIN="-j workdir$i/latest_bestpaths.bin.gz"
