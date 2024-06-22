@@ -345,7 +345,7 @@ void textcoll_solver_t::completeQ7Q24(const halfstate_t& Q7Q24state)
 		{
 			Q7ptr[ vecQ7m10m12m13[i][0] ] = i;
 			size_t j = i+1;
-			while (vecQ7m10m12m13[j][0] == vecQ7m10m12m13[i][0])
+			while (j < vecQ7m10m12m13.size() && vecQ7m10m12m13[j][0] == vecQ7m10m12m13[i][0])
 				++j;
 			i = j;
 		}
