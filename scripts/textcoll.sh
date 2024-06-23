@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 export BINDIR=$(dirname $0)/../bin
 export HELPER=$BINDIR/md5_diffpathhelper
