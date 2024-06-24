@@ -38,6 +38,9 @@ fi
 
 # TEXTCOLL Stage 1: preparation to find solutions over Q7-Q24
 
+# REDUCING MEMORY USAGE: If textcoll crashes due to out of memory then you can reduce memory usage by decreasing the exponent of the maxLUT constant:
+# `static const size_t maxLUT = 1ULL<<29;` in src/md5textcoll/block1.cpp
+
 if [ ! -f Q7Q24.bin.gz ]; then
 	( $TEXTCOLL $MDIFF $FIRSTBLOCKBYTES --prepare --pathfile textcoll_path.bin.gz --alphabet $ALPHABET --prefixfile ${prefixfile} | tee prepare.log ) || exit 1
 	echo "Solutions stored in Q7Q24.bin.gz."
