@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 : ${BOOST_VERSION:=1.57.0}
 : ${BOOST_BUILD_OPTIONS:="-j4 --with-filesystem --with-iostreams --with-program_options --with-serialization --with-system --with-thread"}

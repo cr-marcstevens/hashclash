@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 if [ ! -f Makefile ]; then
 	echo "First run ./configure [--with-cuda=/usr/local/cuda-x.y]"
