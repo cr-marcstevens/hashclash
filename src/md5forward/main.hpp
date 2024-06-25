@@ -58,7 +58,7 @@ public:
 		, nafestweight(0), halfnafweight(false), minQ456tunnel(0), minQ91011tunnel(0), minQ314tunnel(0)
 		, pathsout(0), size(0), count(0), count_balanced(0)
 		, condcount(0), verified(0), verifiedbad(0), minweight(0), fillfraction(0), threads(1)
-		, uct(-4), ucb(-1), ucc('.')
+		, uct(-4), ucb(-1), ucc('.'), main_container(nullptr)
 	{
 		if (uct < -3 || uct > 64 || ucb < 0 || ucb > 32
 			|| (ucc != '0' && ucc != '1' && ucc != '^' && ucc != '!' && ucc != 'm' && ucc != '#')
@@ -76,7 +76,9 @@ public:
 
 	~path_container_autobalance() 
 	{
-		cerr << "Autobalance parameters: maxcond=" << maxcond << endl;
+		if (main_container != nullptr)
+			return;
+		cerr << "Autobalance parameters: maxcond=" << maxcond << " (ab#:" << count_balanced << ")" << endl;
 		if (!noverify)
 			cerr << "Verified: " << verifiedbad << " bad out of " << verified << endl;
 	}
@@ -89,13 +91,39 @@ public:
 		condcount.resize(maxcond+1);
 	}
 
+	void estimate_flush_main()
+	{
+		if (main_container == nullptr)
+			return;
+		boost::lock_guard<boost::mutex> lock(mut);
+		for (unsigned i = 0; i < condcount.size(); ++i)
+		{
+			if (condcount[i])
+			{
+				main_container->estimate(i, condcount[i]);
+				condcount[i] = 0;
+			}
+		}
+		size = 0;
+		maxcond = main_container->maxcond;
+	}
+
 	void estimate(unsigned cond, unsigned amount)
 	{
 		if (cond > maxcond) return;
 		if (ubound == 0) return;
-		boost::lock_guard<boost::mutex> lock(mut);
 		condcount[cond] += amount;
 		size += amount;
+
+		// if we're a helper container then frequently sync with main controller
+		if (main_container != nullptr)
+		{
+			if (size >= 1024)
+				estimate_flush_main();
+			return;
+		}
+
+		// if we're the main container then autobalance
 		unsigned uboundf = unsigned(double(ubound) * estimatefactor);
 		if (size > uboundf) {
 			unsigned newsize = 0;
@@ -129,10 +157,12 @@ public:
 				maxcond += (nafestweight>>1);
 			else
 				maxcond += nafestweight;
-		pathsout.clear();
 		pathsout.resize(maxcond + 1);
-		condcount.clear();
+		for (auto& v : pathsout)
+			v.clear();
 		condcount.resize(maxcond + 1);
+		for (auto& v : condcount)
+			v = 0;
 	}
 
 	void push_back(const differentialpath& path, unsigned cond = 0)
@@ -193,29 +223,55 @@ public:
 		}
 		if (!noverify)
 		{
-			if (!test_path_fast(path, m_diff))
+			if (!test_path_fast(path, m_diff, t-3, t+1))
 			{
-				mut.lock();
 				++verifiedbad;
 				++verified;
-				mut.unlock();
 				return;
 			}
 		}
-		mut.lock();
 		if (!noverify) ++verified;
 		if (ubound == 0) {
 			pathsout[cond].push_back(path);
-			mut.unlock();
+			++size; ++count;
+			if (main_container != nullptr && size >= 1024)
+				push_back_flush_main();
 			return;
 		}
 		if (pathsout[cond].size() < ubound) {
 			pathsout[cond].push_back(path); 
-
 			++size, ++count;
-			autobalance();
+			if (main_container != nullptr && size >= 1024)
+				push_back_flush_main();
+			if (main_container == nullptr)
+				autobalance();
 		}
-		mut.unlock();
+	}
+
+	void push_back_flush_main()
+	{
+		if (main_container == nullptr)
+			return;
+		boost::lock_guard<boost::mutex> lock(mut);
+		for (unsigned i = 0; i < pathsout.size(); ++i)
+		{
+			if (i <= main_container->maxcond)
+			{
+				main_container->size += pathsout[i].size();
+				for (auto& p : pathsout[i])
+					main_container->pathsout[i].emplace_back( std::move(p) );
+			}
+			pathsout[i].clear();
+		}
+		size = 0;
+		main_container->count += count;
+		count = 0;
+		main_container->verified += verified;
+		verified = 0;
+		main_container->verifiedbad += verifiedbad;
+		verifiedbad = 0;
+		main_container->autobalance();
+		maxcond = main_container->maxcond;
 	}
 
 	void autobalance()
@@ -235,21 +291,24 @@ public:
 			} else {
 				size = newsize + pathsout[k].size();
 				maxcond = k;
+				if (size > ubound)
+					maxcond = k-1;
 			}
 			for (unsigned j = maxcond+2; j < pathsout.size(); ++j)
 				pathsout[j].clear();
 		}
 	}
 
-	void export_results(vector< differentialpath >& outpaths) const
+	void export_results(vector< differentialpath >& outpaths)
 	{
 		outpaths.clear();
 		outpaths.reserve(ubound);
 		for (unsigned k = 0; k < pathsout.size() && k <= maxcond; ++k)
 		{
-			unsigned index = unsigned(outpaths.size());
-			outpaths.resize(index + pathsout[k].size());
-			std::copy(pathsout[k].begin(), pathsout[k].end(), outpaths.begin()+index);
+			if (ubound > 0 && outpaths.size() + pathsout[k].size() > ubound)
+				pathsout[k].resize(ubound - outpaths.size());
+			for (auto& p : pathsout[k])
+				outpaths.emplace_back( std::move(p) );
 		}
                 unsigned hbound = unsigned(double(ubound)*fillfraction);
                 unsigned k = maxcond+1;
@@ -258,8 +317,8 @@ public:
                         unsigned length = hbound-index;
                         if (length > pathsout[k].size())
                                 length = pathsout[k].size();
-			outpaths.resize(index + length);
-                        std::copy(pathsout[k].begin(), pathsout[k].begin()+length, outpaths.begin()+index);
+			for (size_t i = 0; i < length; ++i)
+				outpaths.emplace_back( std::move(pathsout[k][i]) );
                         ++k;
                 }
 	}
@@ -335,6 +394,8 @@ public:
 
 	unsigned modn;
 	unsigned modi;
+	unsigned splitsave;
+
 	std::string inputfile;
 	bool showinputpaths;
 	bool normalt01;
@@ -353,6 +414,7 @@ public:
 	int uct, ucb;
 	char ucc;
 
+	path_container_autobalance* main_container;
 };
 
 

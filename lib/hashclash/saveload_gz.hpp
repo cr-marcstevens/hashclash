@@ -52,7 +52,7 @@ namespace hashclash {
 		std::ofstream ofs(filepath.string().c_str(), std::ios::binary);
         if (!ofs) throw std::runtime_error("save_gz(): could not open file!");
         boost::iostreams::filtering_ostream filter;
-        filter.push(boost::iostreams::gzip_compressor());
+        filter.push(boost::iostreams::gzip_compressor(boost::iostreams::gzip::best_speed));
         filter.push(ofs);
         switch (artype) {
 			case binary_archive:

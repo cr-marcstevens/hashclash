@@ -116,6 +116,12 @@ int main(int argc, char** argv)
 			("threads"
 				, po::value<unsigned>(&parameters.threads)->default_value(0)
 				, "Number of computing threads to start.")
+			("generatormode"
+				, po::bool_switch(&parameters.generatormode)
+				, "Activate generator mode that saves ALL trails to disk for <mod> controllers to load.\n")
+			("saveloadwait"
+				, po::value<unsigned>(&parameters.saveloadwait)->default_value(60)
+				, "Number of seconds to wait between procedure calls to save/load trails")
 			;
 
 #ifdef HAVE_CUDA

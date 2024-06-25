@@ -34,6 +34,7 @@
 #include <hashclash/rng.hpp>
 #include <hashclash/differentialpath.hpp>
 #include <hashclash/progress_display.hpp>
+#include <hashclash/timer.hpp>
 
 #include "main.hpp"
 
@@ -63,7 +64,7 @@ inline std::string pathsstring(const std::string& basepath, unsigned modi, unsig
 
 
 progress_display* dostep_progress = 0;
-unsigned dostep_index = 0;
+volatile unsigned dostep_index = 0;
 struct dostep_thread {
 	dostep_thread(vector<differentialpath>& in, path_container_autobalance& out)
 		: pathsin(in), container(out)   
@@ -75,17 +76,21 @@ struct dostep_thread {
 		try {
 			while (true) {
 				mut.lock();
+
 				unsigned i = dostep_index;
-				unsigned iend = i + (unsigned(pathsin.size() - dostep_index)>>4);
-				if (iend > i+4) iend = i+4;
-				if (iend == i && i < pathsin.size())
-					iend = i+1;
-				if (iend != i)
-					(*dostep_progress) += iend-i;
+				if (i >= pathsin.size())
+				{
+					mut.unlock();
+					break;
+				}
+				unsigned cnt = std::max<unsigned>(1, std::min<unsigned>(16, (pathsin.size() - i)/128 ));
+				unsigned iend = i + cnt;
+
+				if (cnt != 0)
+					(*dostep_progress) += cnt;
 				dostep_index = iend;
 				mut.unlock();
-				if (i >= pathsin.size())
-					break;
+
 				for (; i < iend; ++i)
 					worker.md5_backward_differential_step(pathsin[i], container);
 			}
@@ -134,12 +139,13 @@ void dostep(path_container_autobalance& container, bool savetocache)
 		{
 			try {
 				std::string filename = pathsstring("paths" + boost::lexical_cast<std::string>(t+1), k, modn);
+				hashclash::timer loadtime(true);
 				cout << "Loading " << filename << "..." << flush;
 				load_gz(pathstmp, filename, binary_archive);
 				random_permutation(pathstmp);
 				for (unsigned j = modi; j < pathstmp.size(); j += modn)
 					pathsin.push_back(pathstmp[j]);
-				cout << "done: " << pathstmp.size() << " (work:" << pathsin.size() << ")." << endl;
+				cout << "done: " << pathstmp.size() << " (work:" << pathsin.size() << "). (" << loadtime.time() << "s)" << endl;
 			} catch(...) {
 				cout << "failed." << endl;
 			}
@@ -147,24 +153,26 @@ void dostep(path_container_autobalance& container, bool savetocache)
 	} else {
 		bool failed = false;
 		try {
+			hashclash::timer loadtime(true);
 			cout << "Loading " << container.inputfile << "..." << flush;
 			load_gz(pathstmp, binary_archive, container.inputfile);
 			random_permutation(pathstmp);
 			for (unsigned j = modi; j < pathstmp.size(); j += modn)
 				pathsin.push_back(pathstmp[j]);
-			cout << "done: " << pathsin.size() << "." << endl;
+			cout << "done: " << pathsin.size() << ". (" << loadtime.time() << "s)" << endl;
 		} catch(...) {
 			failed = true;
 			cout << "failed." << endl;
 		}
 		if (failed) {
 			try {
+				hashclash::timer loadtime(true);
 				cout << "Loading (text) " << container.inputfile << "..." << flush;
 				load_gz(pathstmp, text_archive, container.inputfile);
 				random_permutation(pathstmp);
 				for (unsigned j = modi; j < pathstmp.size(); j += modn)
 					pathsin.push_back(pathstmp[j]);
-				cout << "done: " << pathsin.size() << "." << endl;
+				cout << "done: " << pathsin.size() << ". (" << loadtime.time() << "s)" << endl;
 			} catch(...) {
 				cout << "failed." << endl;
 			}
@@ -201,10 +209,11 @@ void dostep(path_container_autobalance& container, bool savetocache)
 	else
 		throw std::runtime_error("No valid differential paths found!");
 	std::string filenameout = pathsstring("paths" + boost::lexical_cast<std::string>(t), modi, modn);
+	hashclash::timer savetime(true);
 	cout << "Saving " << pathsout.size() << " paths..." << flush;
 	if (savetocache)
 		pathsout.swap(pathscache);
 	else
 		save_gz(pathsout, filenameout, binary_archive);
-	cout << "done." << endl;
+	cout << "done. (" << savetime.time() << "s)" << endl;
 }

@@ -201,6 +201,7 @@ int dostep(birthday_parameters& parameters)
 	// Start job with given parameters
 	birthday(parameters);
 
+/*
 	ofstream* of1 = 0;
 	ofstream* of2 = 0;
 	if (parameters.modi == 0) {
@@ -226,6 +227,7 @@ int dostep(birthday_parameters& parameters)
 	}
 	if (of1) delete of1;
 	if (of2) delete of2;
+*/
 
 	return 0;
 }

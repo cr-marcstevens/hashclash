@@ -61,7 +61,7 @@ inline std::string pathsstring(const std::string& basepath, unsigned modi, unsig
 
 
 progress_display* dostep_progress = 0;
-unsigned dostep_index = 0;
+volatile unsigned dostep_index = 0;
 struct dostep_thread {
 	dostep_thread(vector<differentialpath>& inlow, vector<differentialpath>& inhigh, path_container& out)
 		: pathsinlow(inlow), pathsinhigh(inhigh), container(out)   
@@ -69,24 +69,39 @@ struct dostep_thread {
 	vector<differentialpath>& pathsinlow;
 	vector<differentialpath>& pathsinhigh;
 	path_container& container;
-	void operator()() {
+	void operator()()
+	{
 		md5_connect_thread* worker = new md5_connect_thread;
-		try {			
-			while (true) {
+		try
+		{
+			vector<differentialpath> buf;
+			unsigned i = xrng128() % pathsinhigh.size();
+			while (true)
+			{
+				buf.clear();
 				mut.lock();
-				unsigned i = dostep_index;
-				unsigned iend = i + (unsigned(pathsinhigh.size() - dostep_index)>>4);
-				if (iend > i+4) iend = i+4;
-				if (iend == i && i < pathsinhigh.size())
-					iend = i+1;
-				if (iend != i)
-					(*dostep_progress) += iend-i;
-				dostep_index = iend;
-				mut.unlock();
-				if (i >= pathsinhigh.size())
+				if (dostep_index >= pathsinhigh.size())
+				{
+					mut.unlock();
 					break;
-				for (; i < iend; ++i)
-					worker->md5_connect(pathsinlow, pathsinhigh[i], container);
+				}
+				unsigned cnt = std::max<unsigned>(1, std::min<unsigned>(128, (pathsinhigh.size() - dostep_index)/128 ));
+				while (buf.size() != cnt)
+				{
+					while (pathsinhigh[i].tbegin() == pathsinhigh[i].tend())
+					{
+						++i;
+						if (i == pathsinhigh.size())
+							i = 0;
+					}
+					buf.emplace_back( std::move( pathsinhigh[i] ) );
+					pathsinhigh[i].clear();
+				}
+				dostep_index += cnt;
+				(*dostep_progress) += cnt;
+				mut.unlock();
+				for (auto& ph : buf)
+					worker->md5_connect(pathsinlow, ph, container);
 			}
 		} catch (std::exception & e) { cerr << "Worker thread: caught exception:" << endl << e.what() << endl; } catch (...) {}
 		delete worker;
@@ -114,43 +129,76 @@ void dostep(path_container& container)
 	const unsigned modn = container.modn;
 	const unsigned modi = container.modi;
 
+	vector< differentialpath> pathsinlow;
+
+	boost::thread_group mythreads;
+	mythreads.create_thread([&pathsinlow, &container]()
+	{
+		if (container.waitinputfile)
+		{
+			while (true)
+			{
+				boost::system::error_code ec;
+				if (boost::filesystem::exists(container.inputfilelow, ec))
+					break;
+				boost::this_thread::sleep(boost::posix_time::milliseconds(100));
+			}
+		}
+		try {
+			hashclash::timer loadtime(true);
+			cout << "Loading " << container.inputfilelow << "..." << flush;
+			load_gz(pathsinlow, binary_archive, container.inputfilelow);
+			sort(pathsinlow.begin(), pathsinlow.end(), diffpathlower_less());
+			cout << "done: " << pathsinlow.size() << ". (" << loadtime.time() << "s)" << endl;
+		} catch(...) {
+			cout << "failed." << endl;
+		}
+	});
+
 	vector< differentialpath > pathsinhigh, pathsout;
+	if (container.waitinputfile)
+	{
+		while (true)
+		{
+			boost::system::error_code ec;
+			if (boost::filesystem::exists(container.inputfilehigh, ec))
+				break;
+			boost::this_thread::sleep(boost::posix_time::milliseconds(100));
+		}
+	}
 	if (modn > 1) {
 		try {
-			vector< differentialpath > pathstmp2;
+			hashclash::timer loadtime(true);
 			cout << "Loading " << container.inputfilehigh << "..." << flush;
+			vector< differentialpath > pathstmp2;
 			load_gz(pathstmp2, binary_archive, container.inputfilehigh);
 			random_permutation(pathstmp2);
 			for (unsigned j = modi; j < pathstmp2.size(); j += modn)
-				pathsinhigh.push_back(pathstmp2[j]);
+				pathsinhigh.push_back( std::move(pathstmp2[j]) );
 			sort(pathsinhigh.begin(), pathsinhigh.end(), diffpathupper_less());
-			cout << "done: " << pathsinhigh.size() << "." << endl;
+			cout << "done: " << pathsinhigh.size() << ". (" << loadtime.time() << "s)" << endl;
 		} catch(...) {
 			cout << "failed." << endl;
 		}
 	} else {
 		try {
+			hashclash::timer loadtime(true);
 			cout << "Loading " << container.inputfilehigh << "..." << flush;
 			load_gz(pathsinhigh, binary_archive, container.inputfilehigh);
 			sort(pathsinhigh.begin(), pathsinhigh.end(), diffpathupper_less());
-			cout << "done: " << pathsinhigh.size() << "." << endl;
+			cout << "done: " << pathsinhigh.size() << ". (" << loadtime.time() << "s)" << endl;
 		} catch(...) {
 			cout << "failed." << endl;
 		}
 	}
+
+	// wait until loading of inputfilelow is also finished
+	mythreads.join_all();
+
+	if (pathsinlow.size() == 0)
+		throw std::runtime_error("No lower differential paths loaded!");
 	if (pathsinhigh.size() == 0)
 		throw std::runtime_error("No upper differential paths loaded!");
-	vector< differentialpath> pathsinlow;
-	try {
-		cout << "Loading " << container.inputfilelow << "..." << flush;
-		load_gz(pathsinlow, binary_archive, container.inputfilelow);
-		sort(pathsinlow.begin(), pathsinlow.end(), diffpathlower_less());
-		cout << "done: " << pathsinlow.size() << "." << endl;
-	} catch(...) {
-		cout << "failed." << endl;
-	}
-	if (pathsinlow.size() == 0)
-		throw std::runtime_error("No lower differential paths loaded!");	
 
 	lowdQt.resize(pathsinlow.size());
 	lowdQtm1.resize(pathsinlow.size());

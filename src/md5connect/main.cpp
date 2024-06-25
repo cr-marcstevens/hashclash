@@ -61,6 +61,7 @@ int main(int argc, char** argv)
 			all("Allowed options");
 
 		int bestmaxcomp;
+		unsigned mintunnel;
 		desc.add_options()
 			("help,h", "Show options.")
 			("mod,m"
@@ -82,6 +83,10 @@ int main(int argc, char** argv)
 			("inputfilehigh"
 				, po::value<string>(&container.inputfilehigh)
 				, "Use specified inputfile for upper paths.")
+
+			("waitinputfile"
+				, po::bool_switch(&container.waitinputfile)
+				, "Wait until input files exist.")
 
 			("showinputpaths,s"
 				, po::bool_switch(&container.showinputpaths)
@@ -109,11 +114,15 @@ int main(int argc, char** argv)
 			("maxcomplexity"
 				, po::value<int>(&bestmaxcomp)->default_value(-1000)
 				, "Maximum complexity = \n"
-				  "  #tunnels - #Qconds\n")
+				  "  #tunnels - #Qconds\n.")
+
+			("mintunnel"
+				, po::value<unsigned>(&mintunnel)->default_value(0)
+				, "Minimum number of tunnels.\n")
 
 			("threads"
 				, po::value<int>(&container.threads)->default_value(-1)
-				, "Number of worker threads")
+				, "Number of worker threads.")
 			;
 
 		msg.add_options()	
@@ -145,6 +154,7 @@ int main(int argc, char** argv)
 		}
 		po::notify(vm);
 		container.bestmaxcomp = bestmaxcomp;
+		container.bestmaxtunnel = mintunnel;
 
 		// Process program options
 		if (vm.count("help") || vm.count("tstep")==0) {

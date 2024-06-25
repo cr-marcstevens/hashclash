@@ -34,6 +34,7 @@
 #include <hashclash/rng.hpp>
 #include <hashclash/differentialpath.hpp>
 #include <hashclash/progress_display.hpp>
+#include <hashclash/timer.hpp>
 
 #include "main.hpp"
 
@@ -213,7 +214,7 @@ void dostep1(const path_container_autobalance& container)
 
 
 progress_display* dostep_progress = 0;
-unsigned dostep_index = 0;
+volatile unsigned dostep_index = 0;
 struct dostep_thread {
 	dostep_thread(vector<differentialpath>& in, path_container_autobalance& out)
 		: pathsin(in), container(out)   
@@ -225,21 +226,32 @@ struct dostep_thread {
 		try {
 			while (true) {
 				mut.lock();
+
 				unsigned i = dostep_index;
-				unsigned iend = i + (unsigned(pathsin.size() - dostep_index)>>4);
-				if (iend > i+4) iend = i+4;
-				if (iend == i && i < pathsin.size())
-					iend = i+1;
-				if (iend != i)
-					(*dostep_progress) += iend-i;
+				if (i >= pathsin.size())
+				{
+					mut.unlock();
+					break;
+				}
+				unsigned cnt = std::max<unsigned>(1, std::min<unsigned>(16, (pathsin.size() - i)/128 ));
+				unsigned iend = i + cnt;
+
+				if (cnt != 0)
+					(*dostep_progress) += cnt;
 				dostep_index = iend;
 				mut.unlock();
-				if (i >= pathsin.size())
-					break;
+
 				for (; i < iend; ++i)
 					worker.md5_forward_differential_step(pathsin[i], container);
 			}
-		} catch (std::exception & e) { cerr << "Worker thread: caught exception:" << endl << e.what() << endl; } catch (...) {}
+			if (container.main_container != nullptr)
+			{
+				if (container.estimatefactor != 0)
+					container.estimate_flush_main();
+				else
+					container.push_back_flush_main();
+			}
+		} catch (std::exception & e) { cerr << "Worker thread: caught exception:" << endl << e.what() << endl; } catch (...) { cerr << "Worker thread: caught unknown exception!" << endl; }
 	}       
 };
 void dostep_threaded(vector<differentialpath>& in, path_container_autobalance& out)
@@ -251,9 +263,14 @@ void dostep_threaded(vector<differentialpath>& in, path_container_autobalance& o
 		dostep_progress = new progress_display(in.size(), true, cout, tstring, "      ", "e     ");
 	else
 		dostep_progress = new progress_display(in.size(), true, cout, tstring, "      ", "      ");
+
+	vector< path_container_autobalance > helpcontainers(out.threads, out);
 	boost::thread_group mythreads;
 	for (unsigned i = 0; i < out.threads; ++i)
-		mythreads.create_thread(dostep_thread(in,out));
+	{
+		helpcontainers[i].main_container = &out;
+		mythreads.create_thread( dostep_thread(in, helpcontainers[i]) );
+	}
 	mythreads.join_all();
 	if (dostep_progress->expected_count() != dostep_progress->count())
 		*dostep_progress += dostep_progress->expected_count() - dostep_progress->count();
@@ -291,12 +308,13 @@ void dostep(path_container_autobalance& container, bool savetocache)
 		{
 			try {
 				std::string filename = pathsstring("paths" + boost::lexical_cast<std::string>(t-1), k, modn);
+				hashclash::timer loadtime(true);
 				cout << "Loading " << filename << "..." << flush;
 				load_gz(pathstmp, filename, binary_archive);
 				random_permutation(pathstmp);
 				for (unsigned j = modi; j < pathstmp.size(); j += modn)
 					pathsin.push_back(pathstmp[j]);
-				cout << "done: " << pathstmp.size() << " (work:" << pathsin.size() << ")." << endl;
+				cout << "done: " << pathstmp.size() << " (work:" << pathsin.size() << "). (" << loadtime.time() << "s)" << endl;
 			} catch(...) {
 				cout << "failed." << endl;
 			}
@@ -304,24 +322,26 @@ void dostep(path_container_autobalance& container, bool savetocache)
 	} else {
 		bool failed = false;
 		try {
+			hashclash::timer loadtime(true);
 			cout << "Loading " << container.inputfile << "..." << flush;
 			load_gz(pathstmp, binary_archive, container.inputfile);
 			random_permutation(pathstmp);
 			for (unsigned j = modi; j < pathstmp.size(); j += modn)
 				pathsin.push_back(pathstmp[j]);
-			cout << "done: " << pathsin.size() << "." << endl;
+			cout << "done: " << pathsin.size() << ". (" << loadtime.time() << "s)" << endl;
 		} catch(...) {
 			failed = true;
 			cout << "failed." << endl;
 		}
 		if (failed) {
 			try {
+				hashclash::timer loadtime(true);
 				cout << "Loading (text) " << container.inputfile << "..." << flush;
 				load_gz(pathstmp, text_archive, container.inputfile);
 				random_permutation(pathstmp);
 				for (unsigned j = modi; j < pathstmp.size(); j += modn)
 					pathsin.push_back(pathstmp[j]);
-				cout << "done: " << pathsin.size() << "." << endl;
+				cout << "done: " << pathsin.size() << ". (" << loadtime.time() << "s)" << endl;
 			} catch(...) {
 				cout << "failed." << endl;
 			}
@@ -338,17 +358,11 @@ void dostep(path_container_autobalance& container, bool savetocache)
 		cout << "Estimating maxcond for upper bound " << unsigned(double(container.ubound)*container.estimatefactor)
 			<< " (=" << container.ubound << " * " << container.estimatefactor << ")..." << endl;
 		dostep_threaded(pathsin, container);
-//		progress_display show_progress(pathsin.size(), true, cout, tstring, "      ", "e     ");
-//		for (unsigned k = 0; k < pathsin.size(); ++k,++show_progress)
-//			md5_forward_differential_step(pathsin[k], container);
 		container.finish_estimate();
 		cout << "Found maxcond = " << container.maxcond << endl;
 	}
 
 	dostep_threaded(pathsin, container);
-//	progress_display show_progress(pathsin.size(), true, cout, tstring, "      ", "      ");
-//	for (unsigned k = 0; k < pathsin.size(); ++k,++show_progress)
-//		md5_forward_differential_step(pathsin[k], container);
 
 	pathstmp.swap(pathsout);	
 	container.export_results(pathsout);
@@ -357,11 +371,43 @@ void dostep(path_container_autobalance& container, bool savetocache)
 		show_path(pathsout[0], container.m_diff);
 	else
 		throw std::runtime_error("No valid differential paths found!");
-	std::string filenameout = pathsstring("paths" + boost::lexical_cast<std::string>(t), modi, modn);
+
 	cout << "Saving " << pathsout.size() << " paths..." << flush;
 	if (savetocache)
+	{
 		pathscache.swap(pathsout);
-	else
+		cout << "cached." << endl;
+		return;
+	}
+	unsigned splitsave = container.splitsave;
+	if (splitsave <= 1)
+	{
+		hashclash::timer savetime(true);
+		std::string filenameout = pathsstring("paths" + boost::lexical_cast<std::string>(t), modi, modn);
 		save_gz(pathsout, filenameout, binary_archive);
+		cout << "done. (" << savetime.time() << "s)" << endl;
+		return;
+	}
+	boost::thread_group mythreads;
+	unsigned threads = std::min<unsigned>(container.threads, splitsave);
+	for (unsigned j = 0; j < threads; ++j)
+	{
+		mythreads.create_thread(
+		[t,j,splitsave,threads,&pathsout]()
+		{
+			vector<differentialpath> pathsouti;
+			pathsouti.reserve( size_t(double(pathsout.size())/double(splitsave)+2) );
+			for (unsigned i = j; i < splitsave; i += threads)
+			{
+				std::string filenameout = pathsstring("paths" + boost::lexical_cast<std::string>(t), i, splitsave);
+				pathsouti.clear();
+				for (size_t k = i; k < pathsout.size(); k += splitsave)
+					pathsouti.emplace_back( std::move( pathsout[k] ));
+				save_gz(pathsouti, filenameout, binary_archive);
+				cout << " " << i;
+			}
+		});
+	}
+	mythreads.join_all();
 	cout << "done." << endl;
 }

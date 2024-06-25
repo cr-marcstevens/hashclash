@@ -434,7 +434,7 @@ int startnearcollision(parameters_type& parameters)
 			uint32 dihvmin[4] = { -dihv[0], -dihv[1], -dihv[2], -dihv[3] };
 			constructupperpath_sbcpc(upperpath, m_diff, dihvmin);
 		} else {
-			upperpath[32].clear();
+			upperpath[34].clear();
 			constructupperpath(upperpath, dm11[j], ncdiff[j].first, ncdiff[j].second);
 		}
 		if (upperpath.nrcond() < bestcond) {
