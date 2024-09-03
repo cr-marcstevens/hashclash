@@ -613,11 +613,8 @@ int partialpathfromfile(parameters_type& parameters)
 			md5compress(ihv2, msg2);
 	}
 	cout << "In-block prefix bytes: " << bytes1 << endl;
-	if (bytes1 == 0)
-	{
-		return 0;
-	}
-	if (bytes1 >= 4)
+	vector<differentialpath> vecpath;
+	if (bytes1 == 0 || bytes1 >= 4)
 	{
 		int steps = bytes1/4;
 		cout << "In-block prefix words: " << steps << endl;
@@ -651,116 +648,107 @@ int partialpathfromfile(parameters_type& parameters)
 			}
 		}
 		path[steps+1] = naf(path[steps+1].diff());
-		cout << endl << "Parsed path:" << endl;
-		show_path(path, parameters.m_diff);
-		vector<differentialpath> vecpath;
-		vecpath.push_back(path);
-		cout << "Saving " << parameters.outfile2 << "..." << flush;
-		try {
-			save_gz(vecpath, binary_archive, parameters.outfile2);
-			cout << "done." << endl;
-		} catch (...) {
-			cout << "failed." << endl;
-			return 1;
-		}
-		return 0;
+		vecpath.emplace_back(path);
 	}
-	
-	// if bytes1 = 1,2,3 then do special effort and generate the set of all partial differential paths
-	// which guarantee the chosen prefixed bytes
-	// TODO: generalize this case for bytes1 = 4*k + 1,2,3
-	uint32 Q1[68] = { ihv1[0], ihv1[3], ihv1[2], ihv1[1] };
-	uint32 Q2[68] = { ihv2[0], ihv2[3], ihv2[2], ihv2[1] };
-	uint32 mask = (~uint32(0)) << (bytes1*8);
-	msg1[0] &= ~mask;
-	uint32 val = 0;
-	uint32 Q10 = ~uint32(0), Q11 = 0;
-	uint32 Q20 = ~uint32(0), Q21 = 0;
-	differentialpath path;
-	std::vector<differentialpath> vecpath;
-	do {
-		--val; val &= mask;
-		msg1[0] = (msg1[0]&~mask) ^ val;
-		msg2[0] = msg1[0] + parameters.m_diff[0];
-		Q1[Qoff+0+1] = md5_step(0, Q1[Qoff+0], Q1[Qoff+0-1], Q1[Qoff+0-2], Q1[Qoff+0-3], msg1[0]);
-		Q2[Qoff+0+1] = md5_step(0, Q2[Qoff+0], Q2[Qoff+0-1], Q2[Qoff+0-2], Q2[Qoff+0-3], msg2[0]);
-		Q10 &= Q1[Qoff+0+1];
-		Q11 |= Q1[Qoff+0+1];
-		Q20 &= Q2[Qoff+0+1];
-		Q21 |= Q2[Qoff+0+1];
+	else
+	{
+		// if bytes1 = 1,2,3 then do special effort and generate the set of all partial differential paths
+		// which guarantee the chosen prefixed bytes
+		// TODO: generalize this case for bytes1 = 4*k + 1,2,3
+		uint32 Q1[68] = { ihv1[0], ihv1[3], ihv1[2], ihv1[1] };
+		uint32 Q2[68] = { ihv2[0], ihv2[3], ihv2[2], ihv2[1] };
+		uint32 mask = (~uint32(0)) << (bytes1*8);
+		msg1[0] &= ~mask;
+		uint32 val = 0;
+		uint32 Q10 = ~uint32(0), Q11 = 0;
+		uint32 Q20 = ~uint32(0), Q21 = 0;
+		differentialpath path;
+		do {
+			--val; val &= mask;
+			msg1[0] = (msg1[0]&~mask) ^ val;
+			msg2[0] = msg1[0] + parameters.m_diff[0];
+			Q1[Qoff+0+1] = md5_step(0, Q1[Qoff+0], Q1[Qoff+0-1], Q1[Qoff+0-2], Q1[Qoff+0-3], msg1[0]);
+			Q2[Qoff+0+1] = md5_step(0, Q2[Qoff+0], Q2[Qoff+0-1], Q2[Qoff+0-2], Q2[Qoff+0-3], msg2[0]);
+			Q10 &= Q1[Qoff+0+1];
+			Q11 |= Q1[Qoff+0+1];
+			Q20 &= Q2[Qoff+0+1];
+			Q21 |= Q2[Qoff+0+1];
 
-		msg1[1] = xrng128();
-		msg2[1] = msg1[1] + parameters.m_diff[1];
-		Q1[Qoff+1+1] = md5_step(1, Q1[Qoff+1], Q1[Qoff+1-1], Q1[Qoff+1-2], Q1[Qoff+1-3], msg1[1]);
-		Q2[Qoff+1+1] = md5_step(1, Q2[Qoff+1], Q2[Qoff+1-1], Q2[Qoff+1-2], Q2[Qoff+1-3], msg2[1]);
-		for (int t = -3; t <= 2; ++t)
+			msg1[1] = xrng128();
+			msg2[1] = msg1[1] + parameters.m_diff[1];
+			Q1[Qoff+1+1] = md5_step(1, Q1[Qoff+1], Q1[Qoff+1-1], Q1[Qoff+1-2], Q1[Qoff+1-3], msg1[1]);
+			Q2[Qoff+1+1] = md5_step(1, Q2[Qoff+1], Q2[Qoff+1-1], Q2[Qoff+1-2], Q2[Qoff+1-3], msg2[1]);
+			for (int t = -3; t <= 2; ++t)
+			{
+				for (unsigned b = 0; b < 32; ++b)
+				{
+					unsigned qtb1 = (Q1[Qoff+t]>>b)&1, qtb2 = (Q2[Qoff+t]>>b)&1;
+					if (qtb1 == 0 && qtb2 == 0)
+						path.setbitcondition(t,b,bc_zero);
+					else if (qtb1 == 1 && qtb2 == 1)
+						path.setbitcondition(t,b,bc_one);
+					else if (qtb1 == 0 && qtb2 == 1)
+						path.setbitcondition(t,b,bc_plus);
+					else if (qtb1 == 1 && qtb2 == 0)
+						path.setbitcondition(t,b,bc_minus);
+				}
+			}
+			path[2] = naf(path[2].diff());
+			vecpath.emplace_back(path);
+		} while (val != 0);
+
+		uint32 keepmask = 0;
+		for (unsigned b = 0; b < 32; ++b)
 		{
+			if (((Q10>>b)&1) == ((Q11>>b)&1))
+				keepmask |= uint32(1)<<b;
+			if (((Q20>>b)&1) == ((Q21>>b)&1))
+				keepmask |= uint32(1)<<b;
+		}
+		for (auto& path : vecpath)
+		{
+			uint32 Q11val = 0, Q11mask = ~uint32(0);
+			for (unsigned b = 0; b < 32; ++b)
+				if (path(1,b) == bc_one || path(1,b) == bc_minus)
+					Q11val |= uint32(1)<<b;
+
 			for (unsigned b = 0; b < 32; ++b)
 			{
-				unsigned qtb1 = (Q1[Qoff+t]>>b)&1, qtb2 = (Q2[Qoff+t]>>b)&1;
-				if (qtb1 == 0 && qtb2 == 0)
-					path.setbitcondition(t,b,bc_zero);
-				else if (qtb1 == 1 && qtb2 == 1)
-					path.setbitcondition(t,b,bc_one);
-				else if (qtb1 == 0 && qtb2 == 1)
-					path.setbitcondition(t,b,bc_plus);
-				else if (qtb1 == 1 && qtb2 == 0)
-					path.setbitcondition(t,b,bc_minus);
-			}
-		}
-		path[2] = naf(path[2].diff());
-		vecpath.emplace_back(path);
-	} while (val != 0);
-
-	uint32 keepmask = 0;
-	for (unsigned b = 0; b < 32; ++b)
-	{
-		if (((Q10>>b)&1) == ((Q11>>b)&1))
-			keepmask |= uint32(1)<<b;
-		if (((Q20>>b)&1) == ((Q21>>b)&1))
-			keepmask |= uint32(1)<<b;
-	}
-	for (auto& path : vecpath)
-	{
-		uint32 Q11val = 0, Q11mask = ~uint32(0);
-		for (unsigned b = 0; b < 32; ++b)
-			if (path(1,b) == bc_one || path(1,b) == bc_minus)
-				Q11val |= uint32(1)<<b;
-
-		for (unsigned b = 0; b < 32; ++b)
-		{
-			if (path(1,b) == bc_plus || path(1,b) == bc_minus || ((keepmask>>b)&1))
-				continue;
-			bitcondition oldbc = path(1,b);
-			path.setbitcondition(1,b,bc_constant);
-			if (!test_path_fast(path,parameters.m_diff))
-			{
-				path.setbitcondition(1,b,oldbc);
-				continue;
-			}
-			bool good = true;
-			Q11mask ^= uint32(1) <<b; // clear bit b
-			val = 0;
-			do {
-				--val; val &= ~Q11mask;
-				Q1[Qoff+1] = (Q11val & Q11mask) ^ val;
-				// uint32 md5_step_bw(unsigned t, uint32 Qtp1, uint32 Qtm0, uint32 Qtm1, uint32 Qtm2, uint32 Qtm3)
-				uint32 m0 = md5_step_bw(0, Q1[Qoff+1], Q1[Qoff+0], Q1[Qoff+0-1], Q1[Qoff+0-2], Q1[Qoff+0-3]);
-				if ((m0 ^ msg1[0]) & ~mask)
+				if (path(1,b) == bc_plus || path(1,b) == bc_minus || ((keepmask>>b)&1))
+					continue;
+				bitcondition oldbc = path(1,b);
+				path.setbitcondition(1,b,bc_constant);
+				if (!test_path_fast(path,parameters.m_diff))
 				{
-					good = false;
-					break;
+					path.setbitcondition(1,b,oldbc);
+					continue;
 				}
-			} while (val != 0);
-			if (!good)
-			{
-				path.setbitcondition(1,b,oldbc);
-				Q11mask ^= uint32(1) <<b; // set bit b again
+				bool good = true;
+				Q11mask ^= uint32(1) <<b; // clear bit b
+				val = 0;
+				do {
+					--val; val &= ~Q11mask;
+					Q1[Qoff+1] = (Q11val & Q11mask) ^ val;
+					// uint32 md5_step_bw(unsigned t, uint32 Qtp1, uint32 Qtm0, uint32 Qtm1, uint32 Qtm2, uint32 Qtm3)
+					uint32 m0 = md5_step_bw(0, Q1[Qoff+1], Q1[Qoff+0], Q1[Qoff+0-1], Q1[Qoff+0-2], Q1[Qoff+0-3]);
+					if ((m0 ^ msg1[0]) & ~mask)
+					{
+						good = false;
+						break;
+					}
+				} while (val != 0);
+				if (!good)
+				{
+					path.setbitcondition(1,b,oldbc);
+					Q11mask ^= uint32(1) <<b; // set bit b again
+				}
 			}
 		}
+		std::sort(vecpath.begin(), vecpath.end());
+		vecpath.erase( std::unique(vecpath.begin(),vecpath.end()), vecpath.end());
 	}
-	std::sort(vecpath.begin(), vecpath.end());
-	vecpath.erase( std::unique(vecpath.begin(),vecpath.end()), vecpath.end());
+
+	cout << endl << "Starting paths:" << endl;
 	show_path(vecpath.front(), parameters.m_diff);
 	cout << "Saving " << parameters.outfile2 << "..." << flush;
 	try {
