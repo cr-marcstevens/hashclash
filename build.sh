@@ -4,8 +4,8 @@
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
 	SDK_PATH=$(xcrun --sdk macosx --show-sdk-path)
-	# github actions macos-latest 1.57.0 fails, so try 1.74.0 instead
-	: ${BOOST_VERSION:=1.74.0}
+	# github actions macos-latest 1.57.0 fails, so try 1.75.0 instead
+	: ${BOOST_VERSION:=1.75.0}
 	echo "[*] Detected macosx: SDK_PATH=${SDK_PATH} BOOST_VERSION=${BOOST_VERSION}"
 fi
 if [ ! -z $(command -v glibtoolize) ]; then
