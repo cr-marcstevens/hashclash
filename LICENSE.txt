@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2017:
+Copyright (c) 2024:
     Marc Stevens
     Cryptology Group
     Centrum Wiskunde & Informatica
