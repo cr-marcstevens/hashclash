@@ -7,6 +7,21 @@ MAXMEMORY=8000
 UPPERPATHCOUNT=1000000
 TTT=12
 
+# Block timeout: Once a near-collision block lasts more than this number of second
+#                the whole attack is aborted
+# A lower value means less time lost once a near-collision block gets 'stuck',
+# but also implies a lower probability of success.
+#
+# Default value is for CPU i7-11800H @ 2.30GHz (8 cores / 16 threads): 2000s
+# To fine-tune BLOCK_TIMEOUT for a particular machine use the following procedure:
+#   1) set BLOCK_TIMEOUT to 3600 or larger
+#   2) run 20 attempts and save logs:
+#      $> for ((i=0; i<20; ++i)); do ./fastcpc.sh ../README.md ../LICENSE.txt > cpc$i.log 2>&1; done
+#   3) Parse logs for near-collision block durations:
+#      $> grep "NC-BLOCK.*FINISHED" cpc*/*.log | cut -d: -f3 | cut -ds -f1 | sort -g
+#   4) Choose appropriate cut-off timeout at the end
+BLOCK_TIMEOUT=2000
+
 VERBOSE_LOG=2
 
 BIRTHDAY_CONTROLLER_NODES=1
@@ -273,7 +288,7 @@ for (( i=0; ; ++i)); do
 	while [ ! -f workdir$i/bestpaths.bin.gz ]; do
 		sleep 1
 		let w=w+1
-		if [ $w -gt 1200 ]; then
+		if [ $w -gt ${BLOCK_TIMEOUT} ]; then
 			logthis 0 "NC-BLOCK $i" "Time-out! Aborting ..."
 			killall md5_diffpathconnect
 			exit 1
@@ -288,7 +303,7 @@ for (( i=0; ; ++i)); do
 	let lastw=0
 	for (( ; ; ++w )); do
 		sleep 1
-		if [ $w -gt 1200 ]; then
+		if [ $w -gt ${BLOCK_TIMEOUT} ]; then
 			logthis 0 "NC-BLOCK $i" "Time-out! Aborting ..."
 			killall md5_diffpathconnect
 			killall md5_diffpathhelper
