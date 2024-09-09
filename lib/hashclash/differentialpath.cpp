@@ -251,34 +251,37 @@ namespace hashclash {
 		return false;
 	}
 
-	bool test_path_fast(const differentialpath& path, const uint32 blockdiff[])
+	bool test_path_fast(const differentialpath& path, const uint32 blockdiff[], int tbegin, int tend)
 	{
-		for (int t = path.tbegin(); t < path.tend(); ++t)
-		{			
-			if (t-3 >= path.tbegin() && t+1 < path.tend() && t >= 0 && t < 64) 
+		if (tbegin < 0) tbegin = 0;
+		if (tend > 64) tend = 64;
+		tbegin = std::max<int>(tbegin, path.tbegin()+3);
+		tend = std::min<int>(tend, path.tend()-1);
+		for (int t = tbegin; t < tend; ++t)
+		{
+			booleanfunction* F = 0;
+			if (t < 16) F = & MD5_F_data;
+			else if (t < 32) F = & MD5_G_data;
+			else if (t < 48) F = & MD5_H_data;
+			else F = & MD5_I_data;
+			uint32 dF = 0;
+			for (unsigned b = 0; b < 32; ++b)
 			{
-				vector<unsigned> ambiguous, impossible;
-				booleanfunction* F = 0;
-				if (t < 16) F = & MD5_F_data;
-				else if (t < 32) F = & MD5_G_data;
-				else if (t < 48) F = & MD5_H_data;
-				else F = & MD5_I_data;
-				uint32 dF = 0;
-				for (unsigned b = 0; b < 32; ++b)
+				bf_outcome outcome = F->outcome(path(t,b), path(t-1,b), path(t-2,b));
+				if (outcome.size() == 1)
 				{
-					bf_outcome outcome = F->outcome(path(t,b), path(t-1,b), path(t-2,b));
-					if (outcome.size() == 1) {
-						if (outcome[0] == bc_plus) 			dF += 1<<b;
-						else if (outcome[0] == bc_minus)	dF -= 1<<b;
-					} else
-						return false;
-				}
-				uint32 dQtm3 = path[t-3].diff();
-				uint32 dR = path[t+1].diff() - path[t].diff();
-				uint32 dT = dQtm3 + dF + blockdiff[md5_wt[t]];
-				if (false == check_rotation_fast(dR, dT, md5_rc[t], path[t], path[t+1]))
+					if (outcome[0] == bc_plus)
+						dF += 1<<b;
+					else if (outcome[0] == bc_minus)
+						dF -= 1<<b;
+				} else
 					return false;
 			}
+			uint32 dQtm3 = path[t-3].diff();
+			uint32 dR = path[t+1].diff() - path[t].diff();
+			uint32 dT = dQtm3 + dF + blockdiff[md5_wt[t]];
+			if (false == check_rotation_fast(dR, dT, md5_rc[t], path[t], path[t+1]))
+				return false;
 		}
 		return true;
 	}

@@ -41,7 +41,7 @@ namespace hashclash {
 	double test_path(const differentialpath& path, const uint32 blockdiff[]);	
 	double check_rotation(uint32 dR, uint32 dT, unsigned n, const wordconditions& Qt, const wordconditions& Qtp1, unsigned loopcount = (1<<10));
 
-	bool test_path_fast(const differentialpath& path, const uint32 blockdiff[]);
+	bool test_path_fast(const differentialpath& path, const uint32 blockdiff[], int tbegin = 0, int tend = 64);
 	bool check_rotation_fast(uint32 dR, uint32 dT, unsigned n, const wordconditions& Qt, const wordconditions& Qtp1, unsigned loopcount = (1<<10));
 
 	// cleans up differential path to backward conditions only
@@ -150,56 +150,36 @@ namespace hashclash {
 		{
 			return !(*this == r);
 		}
+
+		bool operator<(const differentialpath& r) const
+		{
+			const differentialpath& l = *this;
+			int tbegin = l.tbegin() < r.tbegin() ? l.tbegin() : r.tbegin();
+			for (int t = tbegin; t < l.tend() || t < r.tend(); ++t)
+			{
+				if (t >= l.tbegin() && t < l.tend()) {
+					if (t >= r.tbegin() && t < r.tend()) {
+						if (l[t] < r[t]) return true;
+						if (l[t] > r[t]) return false;
+					} else {
+						if (l[t] < wordconditions()) return true;
+						if (l[t] > wordconditions()) return false;
+					}
+				} else
+				{
+					if (t >= r.tbegin() && t < r.tend()) {
+						if (wordconditions() < r[t]) return true;
+						if (wordconditions() > r[t]) return false;
+					}
+				}
+			}
+			return false;
+		}
+
 	//private:
 		int offset;
 		std::vector<wordconditions> path;
 	};
-
-	inline bool operator== (const differentialpath& l, const differentialpath& r)
-	{
-		int tbegin = l.tbegin() < r.tbegin() ? l.tbegin() : r.tbegin();
-		for (int t = tbegin; t < l.tend() || t < r.tend(); ++t)
-		{
-			if (t >= l.tbegin() && t < l.tend()) {
-				if (t >= r.tbegin() && t < r.tend()) {
-					if (l[t] != r[t]) 
-						return false;
-				} else
-					if (l[t] != wordconditions()) 
-						return false;
-			} else
-			{
-				if (t >= r.tbegin() && t < r.tend())
-					if (wordconditions() != r[t]) 
-						return false;
-			}
-		}
-		return true;
-	}
-
-	inline bool operator< (const differentialpath& l, const differentialpath& r)
-	{
-		int tbegin = l.tbegin() < r.tbegin() ? l.tbegin() : r.tbegin();
-		for (int t = tbegin; t < l.tend() || t < r.tend(); ++t)
-		{
-			if (t >= l.tbegin() && t < l.tend()) {
-				if (t >= r.tbegin() && t < r.tend()) {
-					if (l[t] < r[t]) return true;
-					if (l[t] > r[t]) return false;
-				} else {
-					if (l[t] < wordconditions()) return true;
-					if (l[t] > wordconditions()) return false;
-				}
-			} else
-			{
-				if (t >= r.tbegin() && t < r.tend()) {
-					if (wordconditions() < r[t]) return true;
-					if (wordconditions() > r[t]) return false;
-				} 
-			}
-		}
-		return false;
-	}
 
 } // namespace hashclash
 

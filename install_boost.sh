@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-: ${BOOST_VERSION:=1.57.0}
+: ${BOOST_VERSION:=1.65.1}
 : ${BOOST_BUILD_OPTIONS:="-j4 --with-filesystem --with-iostreams --with-program_options --with-serialization --with-system --with-thread"}
 : ${BOOST_BUILD_CXXFLAGS:="-O2"}
 : ${BOOST_INSTALL_PREFIX:=$(pwd)/boost-$BOOST_VERSION}

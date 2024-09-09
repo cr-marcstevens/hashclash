@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
 # check for special configuration for macosx
-
 if [[ "$OSTYPE" == "darwin"* ]]; then
 	SDK_PATH=$(xcrun --sdk macosx --show-sdk-path)
-	# github actions macos-latest 1.57.0 fails, so try 1.70.0 instead
+	export CXX=clang++
+	# github actions macos-latest 1.57.0 fails, so try 1.72.0 instead
 	: ${BOOST_VERSION:=1.72.0}
 	echo "[*] Detected macosx: SDK_PATH=${SDK_PATH} BOOST_VERSION=${BOOST_VERSION}"
 fi
@@ -18,10 +18,9 @@ fi
 # default values for boost library version and install location
 # (if not already defined in environment)
 
-: ${BOOST_VERSION:=1.57.0}
+: ${BOOST_VERSION:=1.65.1}
 : ${BOOST_INSTALL_PREFIX:=$(pwd)/boost-$BOOST_VERSION}
 : ${INCLUDE_DIRS:="/usr/include /usr/local/include $SDK_PATH/usr/include"}
-
 
 # helper functions
 

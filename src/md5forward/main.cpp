@@ -81,7 +81,11 @@ int main(int argc, char** argv)
 
 			("showinputpaths,s"
 				, po::bool_switch(&container.showinputpaths)
-				, "Show all input paths.\n")
+				, "Show all input paths.")
+
+			("splitsave"
+				, po::value<unsigned>(&container.splitsave)->default_value(1)
+				, "Split set of output paths and save into N files.\n")
 
 			("tstep,t"
 				, po::value<unsigned>(&container.t)
@@ -122,9 +126,9 @@ int main(int argc, char** argv)
 				, po::value<unsigned>(&container.ubound)->default_value(0)
 				, "Do autobalancing using target amount.")
 
-            ("fillfraction"
-                    , po::value<double>(&container.fillfraction)->default_value(1)
-                    , "Fill up to fraction of target amount\n\twith heavier paths than maxcond.")
+			("fillfraction"
+				, po::value<double>(&container.fillfraction)->default_value(1)
+				, "Fill up to fraction of target amount\n\twith heavier paths than maxcond.")
 
 			("estimate,e"
 				, po::value<double>(&container.estimatefactor)->default_value(2)
@@ -219,6 +223,7 @@ int main(int argc, char** argv)
 		if (container.modn != 1) {
 			cout << "Using set " << container.modi << " of " << container.modn << endl;
 			container.trange = 0;
+			container.splitsave = 0;
 		}
 
 		if (false == container.normalt01 && container.t <= 1) {
@@ -266,6 +271,20 @@ int main(int argc, char** argv)
 		for (unsigned tt = container.t; tt < container.t+container.trange; ++tt) {
 			path_container_autobalance containertmp = container;
 			containertmp.t = tt;
+
+			if (tt == 1 && container.ubound > 0)
+			{
+				containertmp.ubound >>= 2;
+//				containertmp.maxcond = 157;
+			}
+			if (tt == 2 && container.ubound > 0)
+			{
+				containertmp.ubound >>= 1;
+//				containertmp.maxcond = 177;
+			}
+			if (tt == 3 && container.ubound > 0)
+				containertmp.ubound >>= 0;
+
 			dostep(containertmp, true);
 		}
 		container.t += container.trange;

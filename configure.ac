@@ -8,7 +8,7 @@ AC_CONFIG_MACRO_DIR([m4])
 AM_INIT_AUTOMAKE([foreign subdir-objects])
 
 
-DEFAULT_CXXFLAGS="-O3"
+DEFAULT_CXXFLAGS="-O3 -march=native -DNDEBUG"
 AS_IF([test "x$CXXFLAGS" = "x"],
 	[CXXFLAGS="$DEFAULT_CXXFLAGS"]
 	[usedefaultcxxflags=yes],

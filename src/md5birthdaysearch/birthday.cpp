@@ -55,6 +55,7 @@ unsigned maxblocks = 64;
 bool memhardlimit = false;
 unsigned parameterspathtyperange = 0;
 unsigned procmodn = 0, procmodi = 0;
+bool generatormode = false;
 vector< pair<uint32,uint32> > singleblockdata;
 /**/
 
@@ -426,13 +427,12 @@ void find_collision(const trail_type& trail1, const trail_type& trail2)
 		cout << oc2 << " " << oa2 << " " << ob2 << endl;
 #if 1
 		quit = true;
-#else
 		string filename1 = workdir + "/birthdayblock1_" + boost::lexical_cast<string>(v)+"_" + boost::lexical_cast<string>(w)+".bin";
 		string filename2 = workdir + "/birthdayblock2_" + boost::lexical_cast<string>(v)+"_" + boost::lexical_cast<string>(w)+".bin";
 		ofstream of1(filename1.c_str(), ios::binary | ios::app);
 		ofstream of2(filename2.c_str(), ios::binary | ios::app);
-		save_block(of1,msg1);
-		save_block(of2,msg2);
+		save_block(of1,lmsg1);
+		save_block(of2,lmsg2);
 		cout << "Wrote birthdaycollision block to: " << endl;
 		cout << "\t" << filename1 << endl << "\t" << filename2 << endl;
 #endif
@@ -443,15 +443,23 @@ void find_collision(const trail_type& trail1, const trail_type& trail2)
 
 
 // LOCK_GLOBAL_MUTEX required
+vector<trail_type> main_storage_buffer;
 void distribute_trail(const trail_type& newtrail) 
 {
 	totwork += newtrail.len;
 	totworkallproc += newtrail.len;
 	uint32 procindex = newtrail.end[1] % procmodn;
-	if (procindex == procmodi) {
-		main_storage.insert_trail(newtrail);
-	} else
+	if (procindex == procmodi && !generatormode)
+//		main_storage.insert_trail(newtrail);
+		main_storage_buffer.emplace_back(newtrail);
+	else
 		trail_distribution[procindex].push_back(newtrail);
+}
+// LOCK_GLOBAL_MUTEX required
+void distribute_trail_flush() 
+{
+	main_storage.insert_trails(main_storage_buffer);
+	main_storage_buffer.clear();
 }
 
 // LOCK_GLOBAL_MUTEX required
@@ -527,7 +535,6 @@ void load_save_trails(bool dosave = true)
 			traildata.check = 0x56139078;
 			savepart = (savepart+1) % 64;
 			for (unsigned i = 0; i < procmodn; ++i) {
-				if ( (i%64) != savepart) continue;
 				traildata.trails.clear();
 				{
 					LOCK_GLOBAL_MUTEX;
@@ -537,9 +544,11 @@ void load_save_trails(bool dosave = true)
 					try {
 						++fileserialothers[i];
 						string basefilename = workdir + "/" + boost::lexical_cast<string>(i) 
-							+ "/birthdaydata_" + boost::lexical_cast<string>(procmodi) + "_";
+							+ "/birthdaydata_" + boost::lexical_cast<string>(procmodi) + "_"
+							+ boost::lexical_cast<string>(xrng128()) + "_";
 						string tmpfilename = "/tmp/birthdaydata_" + boost::lexical_cast<string>(i) 
-							+ "_" + boost::lexical_cast<string>(procmodi) + "_";
+							+ "_" + boost::lexical_cast<string>(procmodi) + "_"
+							+ boost::lexical_cast<string>(xrng128()) + "_";
 						save(traildata, binary_archive, tmpfilename + boost::lexical_cast<string>(fileserialothers[i]) + ".tmp");
 						boost::filesystem::copy_file( tmpfilename + boost::lexical_cast<string>(fileserialothers[i]) + ".tmp",
 							basefilename + boost::lexical_cast<string>(fileserialothers[i]) + ".bin");
@@ -624,7 +633,8 @@ struct birthday_thread {
 			else {
 				LOCK_GLOBAL_MUTEX;
 				for (unsigned i = 0; i < work.size(); ++i) 
-					distribute_trail(work[i]); 
+					distribute_trail(work[i]);
+				distribute_trail_flush();
 			}
 			if (single)
 				break;
@@ -636,6 +646,7 @@ struct birthday_thread {
 		vector<trail_type> work;
 		vector< pair<trail_type, trail_type> > collisions;
 		bool verified = false;
+		size_t workamount = (size_t(1)<<26) / size_t(distinguishedpointmask+1);
 		while (true)
 		{
 			uint64 seed;
@@ -654,9 +665,10 @@ struct birthday_thread {
 			{
 				for (unsigned i = 0; i < collisions.size(); ++i)
 					find_collision(collisions[i].first, collisions[i].second);
-				collisions.clear();
 			}
-			else {
+			// if little work has been done processing trail collisions then still do some work
+			if (collisions.size() * size_t(4) < workamount)
+			{
 				work.clear();
 				_simd_device.fill_trail_buffer(seed, work, bool(maxblocks == 1));
 				if (!verified && !work.empty())
@@ -676,7 +688,9 @@ struct birthday_thread {
 				LOCK_GLOBAL_MUTEX;
 				for (unsigned i = 0; i < work.size(); ++i) 
 					distribute_trail(work[i]);
+				distribute_trail_flush();
 			}
+			collisions.clear();
 			if (single)
 				break;
 		}
@@ -696,17 +710,18 @@ struct birthday_thread {
 			loop_simd(single);
 			return;
 		}
-
-		vector<trail_type> work(256);
+		size_t workamount = (size_t(1)<<26) / size_t(distinguishedpointmask+1);
+		vector<trail_type> work(workamount);
 		vector< pair<trail_type,trail_type> > collisions;
 		while (true)
 		{
+			collisions.clear();
 			// generate a batch of new trail starting points
 			{
 				LOCK_GLOBAL_MUTEX;				
 				if (quit) return;
 				main_storage.get_birthdaycollisions(collisions);
-				work.resize(256);
+				work.resize(workamount);
 				for (unsigned i = 0; i < work.size(); ++i)
 				{
 					work[i].start[0] = xrng128();
@@ -721,8 +736,10 @@ struct birthday_thread {
 			{
 				for (unsigned i = 0; i < collisions.size(); ++i)
 					find_collision(collisions[i].first, collisions[i].second);
-				collisions.clear();
-				continue;
+				// if not enough work has been done on processing collisions then generate trails as well
+				// if enough work has been done then go to start of loop
+				if (collisions.size() * size_t(4) >= workamount)
+					continue;
 			}
 			
 			// generate the trails
@@ -734,6 +751,7 @@ struct birthday_thread {
 				LOCK_GLOBAL_MUTEX;
 				for (unsigned i = 0; i < work.size(); ++i)
 					distribute_trail(work[i]); 
+				distribute_trail_flush();
 			}
 
 			if (single)
@@ -794,6 +812,8 @@ void birthday(birthday_parameters& parameters)
 {
 	procmodn = parameters.modn;
 	procmodi = parameters.modi;
+	generatormode = parameters.generatormode;
+
 	trail_distribution.resize(procmodn);
 
 	// add the modi parameter to the seed
@@ -911,8 +931,8 @@ void birthday(birthday_parameters& parameters)
 		std::cout << "Found " << cuda_dev_cnt << " CUDA devices." << std::endl;
 	}
 	// if possible save 1 cpucore for better cuda latency
-	if (parameters.threads > 1 && cuda_dev_cnt > 0 && parameters.threads == boost::thread::hardware_concurrency())
-		--parameters.threads;
+	if (parameters.threads > cuda_dev_cnt)// && parameters.threads == boost::thread::hardware_concurrency())
+		parameters.threads -= cuda_dev_cnt;
 #endif
 
 	boost::thread_group threads;
@@ -937,8 +957,10 @@ void birthday(birthday_parameters& parameters)
 	while (!quit)
 	{
 		boost::this_thread::sleep(boost::posix_time::seconds(10));
-		if (procmodn > 1) {
-			if (save_timer.time() > 60) {
+		if (procmodn > 1 || generatormode)
+		{
+			if (save_timer.time() > parameters.saveloadwait)
+			{
 				load_save_trails();
 				save_timer.start();
 			} //else load_save_trails(false);
