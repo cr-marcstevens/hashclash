@@ -488,6 +488,12 @@ void textcoll_solver_t::completeQ7Q24(const halfstate_t& Q7Q24state)
 						if (!MA.checkword(11, S.m[11]))
 							throw std::runtime_error("Q9m9tunnel: m11-invalid");
 
+/*
+						// Not checking the specific conditions for Q25 and Q26 increases the success probability by about 10%,
+						// as there exist other differential paths for these steps that are also possible.
+						// The part of the code is only executed a number of times that is in the order of a few million times.
+						// Hence, the total cost of calling the 'heavy' check_solution each time should be less than a second anyway.
+						// Thus not verifying Q25 and Q26 has negligble performance impact, and a noticable success probability increase.
 						int tQtok = 24;
 						for (int t = 24; t < 26; ++t)
 						{
@@ -500,6 +506,7 @@ void textcoll_solver_t::completeQ7Q24(const halfstate_t& Q7Q24state)
 						}
 						if (tQtok < 24)
 							continue;
+*/
 						++Q24ok;
 						
 						check_solution(S);
