@@ -50,6 +50,9 @@ jobs:
       with:
         path: boost_*.tar.gz
         key: ${{ matrix.os }}
+    - name: Install dependencies (ubuntu)
+      run: sudo apt-get install -y libbz2-dev
+      if: matrix.os == 'ubuntu-latest'
     - name: Install dependencies (macos)
       run: |
         brew update
