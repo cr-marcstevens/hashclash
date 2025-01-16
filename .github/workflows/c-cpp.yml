@@ -16,7 +16,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Install dependencies (ubuntu)
-      run: sudo apt-get install -y libboost-system-dev libboost-filesystem-dev libboost-iostreams-dev libboost-thread-dev libboost-serialization-dev libboost-program-options-dev
+      run: sudo apt-get install -y bzip2 libboost-system-dev libboost-filesystem-dev libboost-iostreams-dev libboost-thread-dev libboost-serialization-dev libboost-program-options-dev
       if: matrix.os == 'ubuntu-latest'
     - name: Install dependencies (macos)
       run: |
