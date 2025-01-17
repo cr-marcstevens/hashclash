@@ -1,13 +1,12 @@
 # Project HashClash - MD5 & SHA-1 cryptanalytic toolbox
 
-[![C/C++ CI](https://github.com/cr-marcstevens/hashclash/actions/workflows/c-cpp.yml/badge.svg)](https://github.com/cr-marcstevens/hashclash/actions/workflows/c-cpp.yml)
-
 ## Feedback & pingback appreciated!
 
 I'm always curious to hear where HashClash is used for! ([@realhashbreaker](https://twitter.com/realhashbreaker)  on Twitter or let me know via [Issues](https://github.com/cr-marcstevens/hashclash/issues))
 
-
 If you like HashClash and use it more often then please consider becoming a sponsor.
+
+[![](https://img.shields.io/static/v1?label=Sponsor&message=%E2%9D%A4&logo=GitHub&color=%23fe8e86)](https://github.com/sponsors/cr-marcstevens)
 
 ## Requirements
 
