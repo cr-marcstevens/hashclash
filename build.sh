@@ -18,7 +18,7 @@ fi
 # default values for boost library version and install location
 # (if not already defined in environment)
 
-: ${BOOST_VERSION:=1.65.1}
+: ${BOOST_VERSION:=1.88.0}
 : ${BOOST_INSTALL_PREFIX:=$(pwd)/boost-$BOOST_VERSION}
 : ${INCLUDE_DIRS:="/usr/include /usr/local/include $SDK_PATH/usr/include"}
 

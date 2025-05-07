@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-: ${BOOST_VERSION:=1.65.1}
-: ${BOOST_BUILD_OPTIONS:="-j4 --with-filesystem --with-iostreams --with-program_options --with-serialization --with-system --with-thread"}
+: ${BOOST_VERSION:=1.88.0}
+: ${BOOST_BUILD_OPTIONS:="-j4 --with-filesystem --with-iostreams --with-program_options --with-serialization --with-chrono --with-date_time --with-thread --with-system"}
 : ${BOOST_BUILD_CXXFLAGS:="-O2"}
 : ${BOOST_INSTALL_PREFIX:=$(pwd)/boost-$BOOST_VERSION}
 
@@ -57,7 +57,7 @@ function retrieve_tar_gz_file
 
 # retrieve file if necessary
 retrieve_tar_gz_file $BOOST_FILE https://downloads.sourceforge.net/project/boost/boost/$BOOST_VERSION/$BOOST_FILE
-retrieve_tar_gz_file $BOOST_FILE https://downloads.sourceforge.net/project/boost/boost/$BOOST_VERSION/$BOOST_FILE
+retrieve_tar_gz_file $BOOST_FILE https://archives.boost.io/release/$BOOST_VERSION/source/$BOOST_FILE
 
 # test if we have file
 test_tar_gz_file $BOOST_FILE \

@@ -34,13 +34,13 @@ If you like HashClash and use it more often then please consider becoming a spon
 <summary>See details</summary>
 <p>
   
-- local boost C++ libraries (preferable version 1.57.0)
+- local boost C++ libraries
 
   `./install_boost.sh` 
 
-  Override default boost version 1.57.0 and/or installation directory as follows:
+  Override default boost version and/or installation directory as follows:
   
-  `BOOST_VERSION=1.65.1 BOOST_INSTALL_PREFIX=$HOME/boost/boost-1.65.1 ./install_boost.sh`
+  `BOOST_VERSION=1.88.0 BOOST_INSTALL_PREFIX=$HOME/boost/boost-1.88.0 ./install_boost.sh`
   
 - Build configure script
 
@@ -48,7 +48,7 @@ If you like HashClash and use it more often then please consider becoming a spon
   
 - Run configure (with boost installed in `$(pwd)/boost-VERSION` by `install_boost.sh`)
 
-  `./configure --with-boost=$(pwd)/boost-1.57.0 [--without-cuda|--with-cuda=/usr/local/cuda-X.X]`
+  `./configure --with-boost=$(pwd)/boost-1.88.0 [--without-cuda|--with-cuda=/usr/local/cuda-X.X]`
 
 - Build programs
 
