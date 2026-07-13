@@ -1,7 +1,7 @@
 /**************************************************************************\
 |
 |    Copyright (C) 2012 Marc Stevens
-|    FOR RESEARCH COLLABORATION ONLY, NOT FOR REDISTRIBUTION
+|    MIT License
 |
 \**************************************************************************/
 
